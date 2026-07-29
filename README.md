@@ -20,17 +20,25 @@ python manage.py runserver
 
 Open http://127.0.0.1:8000/ and sign in.
 
-- `/strategies/` — configure parameters, upload custom Python
-- `/data/` — local CSV catalog
-- `/backtest/` — run, compare, win rate + equity chart
+| Path | Purpose |
+| ---- | ------- |
+| `/strategies/` | Parameters, custom Python |
+| `/data/` | Local CSV catalog |
+| `/backtest/` | Run, compare, win rate + equity chart |
+| `/live/` | Deployments, live sync |
+| `/broker/` | MT5 agents, API tokens |
+
+**Windows agent:** [agent/README.md](./agent/README.md)
 
 ## Layout
 
 - `config/` — Django settings, URLs
-- `apps/` — `core`, `strategies`, `marketdata`, `backtest`, `trading`, `brokers` (stubs until later phases)
+- `apps/` — `core`, `strategies`, `marketdata`, `backtest`, `trading`, `brokers`
+- `agent/` — Windows MT5 poll worker (not imported by Django on Mac/web-only host)
 - `templates/` — Tailwind + HTMX UI
 - `data/` — local M1 OHLC CSVs (not in git)
+- `docs/WORKFLOW.md` — agent prompts and multi-agent playbook
 
 ## Progress
 
-Session handoff: [untilNow.md](./untilNow.md).
+Session handoff: [untilNow.md](./untilNow.md). Full plan: [PLAN.md](./PLAN.md).

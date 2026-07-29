@@ -9,12 +9,12 @@ All application code for this product lives under **`tradeBot/`** only. Do not c
 
 ## Phases (one agent chat ≈ one slice)
 
-| Slice | Scope |
-| ----- | ----- |
-| **1a** | Django scaffold, auth, Tailwind + HTMX base shell |
-| **1b** | `BaseStrategy`, indicators, example strategies, marketdata catalog + loader |
-| **1c** | Backtest runner, results UI (win rate %, equity chart) |
-| **2+** | See `PLAN.md` |
+| Slice | Scope | Status |
+| ----- | ----- | ------ |
+| **1a–1c** | Scaffold, strategies, marketdata, backtest | Done |
+| **2** | Strategy UX, custom upload, deploy review | Done |
+| **3** | MT5 agent, live worker, broker API | Done |
+| **4+** | Data breadth, polish — see `PLAN.md`, [docs/WORKFLOW.md](docs/WORKFLOW.md) | Next |
 
 When a slice is done, **stop** and start a **new chat** with `@untilNow.md` and `@PLAN.md`. Do not continue unrelated phases in the same thread.
 

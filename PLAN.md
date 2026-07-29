@@ -22,10 +22,10 @@ todos:
     status: completed
   - id: live-trading
     content: Deployment model, agent API (pull/heartbeat), LiveWorker on Windows agent, trading dashboard
-    status: in_progress
+    status: completed
   - id: windows-agent
     content: tradebot-agent package, Windows setup docs, agent token flow in Broker UI, optional Windows Service
-    status: pending
+    status: in_progress
   - id: data-extend
     content: Management command to download FX majors; document/add stock data path (yfinance or MT5)
     status: pending
@@ -36,9 +36,19 @@ isProject: false
 
 > **Project plan** — includes full setup for **A (all-in-one)** and **B (split)** deployments. See [Deployment](#deployment-two-supported-setups-keep-both).
 
-## Current state
+## Current state (2026-07-29)
 
-[tradeBot/](tradeBot/) is **data-only today**: M1 OHLC CSVs (`timestamp,open,high,low,close`, epoch ms) under `[tradeBot/data/](tradeBot/data/)` (e.g. `spx/`, `dow/`, `silver/`, `brent/`), populated via **dukascopy-node** (see logs in `[tradeBot/data/download_multi.log](tradeBot/data/download_multi.log)`). There is **no Python/Django code** yet. `[mql-trading-app/](mql-trading-app/)` is a **separate, optional** MT5 EA path; **this project does not use MQL**.
+**Phases 1–3 are implemented** in this repo. Session handoff: [untilNow.md](untilNow.md). GitHub: [Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5).
+
+| Layer | Location | Notes |
+| ----- | -------- | ----- |
+| Web app | `config/`, `apps/`, `templates/` | Auth, strategies, marketdata, backtest, trading, brokers |
+| Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
+| Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
+
+**Still open (Phase 4 + polish):** `download_bars` management command, broader FX/stock data, non-admin symbol-map UI, live/backtest parity (SL/TP, position rules), optional Celery for long backtests, Windows Service docs for the agent. See [Post–Phase 3 backlog](#postphase-3-backlog).
+
+`[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
 ---
 
@@ -479,28 +489,46 @@ Interaction style: **server-rendered Django templates + HTMX** for forms and run
 
 ## Phased delivery
 
-### Phase 1 — Foundation + backtest (usable without MT5)
+### Phase 1 — Foundation + backtest (usable without MT5) — **done**
 
 - Django project scaffold, auth (login), base UI shell.
 - Python `BaseStrategy` + indicator registry; 3 **example strategies** in `strategies/library/` (MA cross, RSI reversal, range breakout).
 - Market data catalog + loader wired to existing CSVs.
 - Backtest runner + results UI with **win rate %** and equity chart.
 
-### Phase 2 — Strategy UX
+### Phase 2 — Strategy UX — **done**
 
 - Parameter forms per library strategy; custom Python strategy upload with validation.
-- Backtest history and compare runs.
+- Backtest history and compare runs; deploy review before live.
 
-### Phase 3 — MT5 demo/live
+### Phase 3 — MT5 demo/live — **done (v1)**
 
-- Agent API + `tradebot-agent` on Windows; Broker UI (token, online status).
-- Deployment lifecycle on demo account; positions/logs via agent sync.
-- Document deployment in [PLAN.md](PLAN.md) (all-in-one + split setup).
+- Agent API (`/api/agent/*`), Bearer token auth, Broker UI (create agent, online status).
+- `Deployment` lifecycle (draft → armed / paused / stopped); `/live/` sync UI (positions, deals, errors).
+- `agent/live_worker.py` + `mt5_adapter.py`: new-bar loop, shared strategy code, market orders.
+- Setup: [agent/README.md](agent/README.md), `agent.env.example`. Optional Windows Service **not** implemented yet.
 
-### Phase 4 — Data & stocks breadth
+### Phase 4 — Data & stocks breadth — **next**
 
-- FX pair downloads via Dukascopy command.
+- FX pair downloads via Dukascopy management command (`download_bars`).
 - Stock symbols via yfinance daily/intraday (or MT5 history where available); document limitations vs M1 forex CFD data.
+
+---
+
+## Post–Phase 3 backlog
+
+Prioritize with [untilNow.md](untilNow.md). Not required for core success criteria.
+
+| Item | Area | Goal |
+| ---- | ---- | ---- |
+| Live/backtest parity | `agent/`, `apps/backtest/` | SL/TP on broker, position flip rules aligned with backtester |
+| Symbol map UX | `apps/marketdata/` | Editor outside Django admin; validate before deploy |
+| Deployment event log | `apps/trading/` | Auditable state changes + agent errors |
+| Celery backtests | `apps/backtest/tasks.py` | Async long runs + HTMX progress (Redis optional) |
+| Windows Service | `agent/` docs | Run agent as service on trading VPS |
+| Phase 4 data | management command | FX majors + stock path per plan |
+
+Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ---
 
@@ -520,7 +548,7 @@ Interaction style: **server-rendered Django templates + HTMX** for forms and run
 
 ## Success criteria
 
-- User can run a **parameterized Python strategy** or add **custom Python** that passes validation; backtest and live use identical modules.
-- Backtest on `[tradeBot/data/](tradeBot/data/)` returns **win rate %** and supporting metrics on a chosen range.
-- Same strategy deploys to **MT5 demo**, places/closes orders per rules, with pause and live-account safeguards.
+- User can run a **parameterized Python strategy** or add **custom Python** that passes validation; backtest and live use identical modules. — **met**
+- Backtest on `[tradeBot/data/](tradeBot/data/)` returns **win rate %** and supporting metrics on a chosen range. — **met**
+- Same strategy deploys to **MT5 demo**, places/closes orders per rules, with pause and live-account safeguards. — **met (v1)**; refine execution parity in backlog above.
 
