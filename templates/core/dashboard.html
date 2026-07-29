@@ -7,7 +7,7 @@
   <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 lg:col-span-2">
     <h2 class="text-base font-semibold text-white">Welcome back</h2>
     <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-      Strategy engine and local data catalog are wired. Next: backtest runner and results UI (Phase 1c).
+      Phase 1 complete: strategies, local data, and backtests with win rate and equity charts.
     </p>
     <dl class="mt-6 grid gap-4 sm:grid-cols-3">
       <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
@@ -16,7 +16,9 @@
       </div>
       <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
         <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Last backtest win rate</dt>
-        <dd class="mt-1 text-2xl font-semibold tabular-nums text-emerald-400">—</dd>
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-emerald-400">
+          {% if last_backtest and last_backtest.win_rate_pct != None %}{{ last_backtest.win_rate_pct }}%{% else %}—{% endif %}
+        </dd>
       </div>
       <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
         <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Local datasets</dt>
@@ -24,31 +26,21 @@
       </div>
     </dl>
     <p class="mt-4 text-sm text-zinc-500">
-      <a href="{% url 'strategies:list' %}" class="text-sky-400 hover:text-sky-300">{{ strategy_count }} saved strateg{{ strategy_count|pluralize:"y,ies" }}</a>
+      <a href="{% url 'backtest:create' %}" class="text-sky-400 hover:text-sky-300">New backtest</a>
       ·
-      <a href="{% url 'marketdata:catalog' %}" class="text-sky-400 hover:text-sky-300">Data catalog</a>
+      <a href="{% url 'strategies:list' %}" class="text-sky-400 hover:text-sky-300">{{ strategy_count }} strategies</a>
+      ·
+      <a href="{% url 'marketdata:catalog' %}" class="text-sky-400 hover:text-sky-300">Data</a>
     </p>
   </section>
 
   <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-    <h2 class="text-base font-semibold text-white">Phase 1 progress</h2>
+    <h2 class="text-base font-semibold text-white">Phase 1</h2>
     <ul class="mt-4 space-y-3 text-sm text-zinc-400">
-      <li class="flex items-start gap-2">
-        <span class="mt-0.5 text-emerald-400">✓</span>
-        Django shell + auth (1a)
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="mt-0.5 text-emerald-400">✓</span>
-        BaseStrategy, indicators, library strategies (1b)
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="mt-0.5 text-emerald-400">✓</span>
-        Data catalog + M1 loader (1b)
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="mt-0.5 text-zinc-600">○</span>
-        Backtest runner + UI (1c)
-      </li>
+      <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Scaffold + auth (1a)</li>
+      <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Strategies + marketdata (1b)</li>
+      <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Backtest runner + results UI (1c)</li>
+      <li class="flex items-start gap-2"><span class="text-zinc-600">○</span> MT5 agent (Phase 3)</li>
     </ul>
   </section>
 </div>

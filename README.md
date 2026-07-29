@@ -18,6 +18,10 @@ python manage.py runserver
 
 Open http://127.0.0.1:8000/ and sign in.
 
+- `/strategies/` — library strategies
+- `/data/` — local CSV catalog
+- `/backtest/` — run backtests and view win rate + equity chart
+
 ## Layout
 
 - `config/` — Django settings, URLs

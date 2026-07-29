@@ -1,0 +1,41 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}New backtest{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-xl space-y-6">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {% for field in form %}
+    <div>
+      <label class="tb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}
+        <p class="mt-1 text-xs text-zinc-500">{{ field.help_text }}</p>
+      {% endif %}
+      {% for error in field.errors %}
+        <p class="mt-1 text-xs text-rose-400">{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <p class="text-xs text-zinc-600">
+    Intrabar exits use the conservative rule: stop-loss before take-profit when both are touched on the same bar.
+  </p>
+
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
+      Run backtest
+    </button>
+    <a href="{% url 'backtest:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800">
+      Cancel
+    </a>
+  </div>
+</form>
+{% endblock %}

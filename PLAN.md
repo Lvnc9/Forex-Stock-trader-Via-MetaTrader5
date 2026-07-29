@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: backtest
     content: Implement BacktestRunner, BacktestRun model, Celery task, results UI with win rate % and equity chart
-    status: pending
+    status: completed
   - id: strategy-ui
     content: Strategy list, per-strategy parameter forms, custom Python upload/validation, deploy review step
     status: pending

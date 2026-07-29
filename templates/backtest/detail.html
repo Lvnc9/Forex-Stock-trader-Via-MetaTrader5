@@ -1,0 +1,125 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Backtest results{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'backtest:list' %}" class="text-sm text-sky-400 hover:text-sky-300">← All backtests</a>
+  <h2 class="mt-2 text-lg font-semibold text-white">{{ run.strategy.name }} · {{ run.catalog_slug }} · {{ run.timeframe }}</h2>
+  <p class="text-sm text-zinc-500">{{ run.start }} → {{ run.end }}</p>
+</div>
+
+{% if run.status == "failed" %}
+  <div class="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+    {{ run.error_message|default:"Backtest failed." }}
+  </div>
+{% endif %}
+
+{% if run.status == "completed" %}
+  <div class="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Win rate</dt>
+      <dd class="mt-1 text-3xl font-semibold tabular-nums text-emerald-400">{{ metrics.win_rate_pct }}%</dd>
+      <p class="mt-1 text-xs text-zinc-500">{{ metrics.winning_trades }}W / {{ metrics.losing_trades }}L · {{ metrics.trade_count }} trades</p>
+    </div>
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Net return</dt>
+      <dd class="mt-1 text-3xl font-semibold tabular-nums text-white">{{ metrics.net_return_pct }}%</dd>
+      <p class="mt-1 text-xs text-zinc-500">Final {{ metrics.final_balance }}</p>
+    </div>
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Profit factor</dt>
+      <dd class="mt-1 text-3xl font-semibold tabular-nums text-sky-400">{{ metrics.profit_factor }}</dd>
+    </div>
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Max drawdown</dt>
+      <dd class="mt-1 text-3xl font-semibold tabular-nums text-rose-300">{{ metrics.max_drawdown_pct }}%</dd>
+    </div>
+  </div>
+
+  <section class="mb-10 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+    <h3 class="mb-4 text-sm font-semibold text-zinc-300">Equity curve</h3>
+    <div class="h-72">
+      <canvas id="equityChart"></canvas>
+    </div>
+  </section>
+
+  {% if trade_rows %}
+    <section>
+      <h3 class="mb-4 text-sm font-semibold text-zinc-300">Trades</h3>
+      <div class="overflow-hidden rounded-xl border border-zinc-800">
+        <table class="min-w-full divide-y divide-zinc-800 text-sm">
+          <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
+            <tr>
+              <th class="px-4 py-3">Entry</th>
+              <th class="px-4 py-3">Exit</th>
+              <th class="px-4 py-3">Side</th>
+              <th class="px-4 py-3 text-right">PnL</th>
+              <th class="px-4 py-3">Reason</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-800 bg-zinc-950/40">
+            {% for t in trade_rows %}
+              <tr>
+                <td class="px-4 py-2 text-xs text-zinc-400">{{ t.entry_time }}</td>
+                <td class="px-4 py-2 text-xs text-zinc-400">{{ t.exit_time }}</td>
+                <td class="px-4 py-2 capitalize text-zinc-300">{{ t.side }}</td>
+                <td class="px-4 py-2 text-right tabular-nums {% if t.pnl >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                  {{ t.pnl }}
+                </td>
+                <td class="px-4 py-2 text-xs text-zinc-500">{{ t.exit_reason }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  <script>
+    (function () {
+      const raw = {{ equity_chart_json|safe }};
+      if (!raw.length) return;
+      const labels = raw.map((p) => p.t);
+      const data = raw.map((p) => p.equity);
+      const ctx = document.getElementById("equityChart");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Equity",
+            data,
+            borderColor: "rgb(56, 189, 248)",
+            backgroundColor: "rgba(56, 189, 248, 0.08)",
+            fill: true,
+            tension: 0.15,
+            pointRadius: 0,
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: {
+              ticks: { maxTicksLimit: 8, color: "#71717a" },
+              grid: { color: "rgba(63,63,70,0.4)" },
+            },
+            y: {
+              ticks: { color: "#71717a" },
+              grid: { color: "rgba(63,63,70,0.4)" },
+            },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+    })();
+  </script>
+{% endif %}
+{% endblock %}
