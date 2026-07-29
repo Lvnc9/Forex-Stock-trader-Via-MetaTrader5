@@ -49,7 +49,7 @@ python manage.py runserver
 
 ## Last commit
 
-- (see git log)
+- `0bc54d9` — Phase 1c: backtest runner, BacktestRun model, and results UI
 
 ## Next session (Phase 2 or Phase 3 slice)
 
