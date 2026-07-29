@@ -70,7 +70,8 @@ python manage.py runserver
 
 ## Last commit
 
-- (update after push)
+- `c4d8d55` — Phase 2: strategy parameters, custom upload, backtest compare
+- Remote: pushed to `origin/main` after this session (see GitHub section)
 
 ## Next session
 
