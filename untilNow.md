@@ -78,6 +78,7 @@ Mac dev: agent runs heartbeat-only without MetaTrader5.
 
 ## Last commit
 
+- `55f8444` — docs: mark Phases 1–3 done and add multi-agent workflow guide
 - `4ca3309` — Phase 3: LiveWorker, MT5 adapter, and live trading sync UI
 
 ## Recommended next work (pick one per chat)
