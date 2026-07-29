@@ -54,6 +54,7 @@ Open http://127.0.0.1:8000/ → redirects to login → dashboard after sign-in.
 
 ## Last commit
 
+- `8e8b457` — docs: update untilNow and ignore download/ CSV artifacts
 - `2652b47` — Phase 1a: Django scaffold, auth, and Tailwind+HTMX shell
 
 ## Next session (Phase 1b)
