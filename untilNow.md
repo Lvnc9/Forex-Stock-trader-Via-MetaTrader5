@@ -56,7 +56,7 @@ Agent (Windows): see [agent/README.md](./agent/README.md).
 
 ## Last commit
 
-- (pending push for polish slices)
+- `d707feb` — Complete polish slices 0–7
 
 ## Recommended next work
 
