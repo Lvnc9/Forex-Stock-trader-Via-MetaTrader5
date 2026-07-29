@@ -54,7 +54,8 @@ python manage.py runserver
 
 ## Last commit
 
-- (update after commit)
+- `d06466c` — Phase 1b: marketdata catalog, M1 loader, and UI routes
+- `dca92b6` — Phase 1b: strategy engine, indicators, and library strategies
 
 ## Next session (Phase 1c)
 
