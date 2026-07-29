@@ -59,7 +59,7 @@ python -m agent
 
 ## Last commit
 
-- (after push)
+- `062d213` — Phase 2–3: deploy review, broker UI, agent API, stub agent
 
 ## Next session
 
