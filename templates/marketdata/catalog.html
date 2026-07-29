@@ -1,0 +1,68 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Data catalog{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="text-sm text-zinc-400">Local M1 OHLC datasets under <code class="text-zinc-300">data/&lt;slug&gt;/</code> (not committed to git).</p>
+  </div>
+  <dl class="flex gap-6 text-sm">
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Instruments</dt>
+      <dd class="text-xl font-semibold tabular-nums text-white">{{ instrument_count }}</dd>
+    </div>
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">M1 bars (indexed)</dt>
+      <dd class="text-xl font-semibold tabular-nums text-sky-400">{{ total_bars|floatformat:0 }}</dd>
+    </div>
+  </dl>
+</div>
+
+{% if instruments %}
+  <div class="overflow-hidden rounded-xl border border-zinc-800">
+    <table class="min-w-full divide-y divide-zinc-800 text-sm">
+      <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
+        <tr>
+          <th class="px-4 py-3 font-medium">Slug</th>
+          <th class="px-4 py-3 font-medium">Dukascopy id</th>
+          <th class="px-4 py-3 font-medium">Range (UTC)</th>
+          <th class="px-4 py-3 font-medium text-right">CSV files</th>
+          <th class="px-4 py-3 font-medium text-right">M1 bars</th>
+          <th class="px-4 py-3 font-medium">MT5 symbol</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-800 bg-zinc-950/40">
+        {% for row in instruments %}
+          {% with c=row.catalog %}
+            <tr>
+              <td class="px-4 py-3 font-medium text-white">{{ c.slug }}</td>
+              <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ c.dukascopy_id|default:"—" }}</td>
+              <td class="px-4 py-3 text-zinc-400">
+                {% if c.start and c.end %}
+                  {{ c.start|date:"Y-m-d" }} → {{ c.end|date:"Y-m-d" }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums text-zinc-300">{{ c.file_count }}</td>
+              <td class="px-4 py-3 text-right tabular-nums text-zinc-300">{{ c.bar_count }}</td>
+              <td class="px-4 py-3 text-zinc-400">
+                {% if row.symbol_map and row.symbol_map.mt5_symbol %}
+                  {{ row.symbol_map.mt5_symbol }}
+                {% else %}
+                  <span class="text-zinc-600">Map in admin</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="rounded-xl border border-dashed border-zinc-700 px-4 py-10 text-center text-sm text-zinc-500">
+    No instrument folders with CSVs found under <code class="text-zinc-400">data/</code>.
+  </p>
+{% endif %}
+{% endblock %}

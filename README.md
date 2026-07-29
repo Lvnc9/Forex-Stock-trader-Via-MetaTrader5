@@ -11,6 +11,7 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env       # optional; defaults work for local SQLite
 python manage.py migrate
+python manage.py seed_library_strategies
 python manage.py createsuperuser
 python manage.py runserver
 ```

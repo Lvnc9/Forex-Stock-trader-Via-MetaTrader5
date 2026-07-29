@@ -5,67 +5,65 @@ Handoff file for the **next agent chat**. Update at the end of every session.
 ## Plan reference
 
 - Full spec: [PLAN.md](./PLAN.md)
-- YAML todos in PLAN frontmatter: update status there when you complete major items (optional but helpful).
 
 ## Current state (last updated: 2026-07-29)
 
 | Area | Status |
 | ---- | ------ |
-| Repo | `tradeBot/` git initialized; Django **Phase 1a complete** |
 | Phase 1a (scaffold + auth + UI shell) | **Done** |
-| Phase 1b (strategies + marketdata) | Not started |
+| Phase 1b (strategies + marketdata) | **Done** |
 | Phase 1c (backtest + results UI) | Not started |
-| Git | Initialized under `tradeBot/` |
 
 ## Phase 1 checklist (PLAN)
 
 | Item | 1a | 1b | 1c |
 | ---- | -- | -- | -- |
-| Django project (`config/`, `apps/`, `manage.py`) | ✓ | | |
-| App stubs: `core`, `strategies`, `marketdata`, `backtest`, `trading`, `brokers` | ✓ | | |
-| Auth (login / logout, protected dashboard) | ✓ | | |
-| Tailwind + HTMX base shell (sidebar nav per PLAN) | ✓ | | |
-| `BaseStrategy` + `IndicatorRegistry` + example strategies | | ○ | |
-| Market data catalog + M1 loader | | ○ | |
-| Backtest runner + results UI (win rate %, equity chart) | | | ○ |
+| Django project + app layout | ✓ | | |
+| Auth + Tailwind/HTMX shell | ✓ | | |
+| `BaseStrategy` + `IndicatorRegistry` + `SignalEngine` + loader | | ✓ | |
+| 3 library strategies (MA, RSI, range breakout) | | ✓ | |
+| `Strategy` model + `seed_library_strategies` | | ✓ | |
+| Market data catalog scan + M1 loader/resampler + `SymbolMap` | | ✓ | |
+| UI: `/strategies/`, `/data/` | | ✓ | |
+| Backtest runner + results UI | | | ○ |
 
-## Completed this session (Phase 1a)
+## Completed this session (Phase 1b)
 
-- Django 5 project: `config/`, `manage.py`, `requirements.txt` (Django, django-environ, django-htmx)
-- Six apps registered per PLAN (only `core` has views/templates; others are stubs)
-- Session auth: login page, logout (POST), `@login_required` dashboard
-- UI: dark zinc sidebar + top bar, nav placeholders, Demo/MT5 offline pills, HTMX boost on body, Alpine for mobile sidebar
-- `README.md`, `.env.example`, local `venv` + `migrate` verified
+- **Strategies:** `BaseStrategy`, `Signal`, `BarContext`, `IndicatorRegistry` (SMA/EMA/RSI/MACD/BB/ATR, cross helpers), `SignalEngine`, module loader
+- **Library:** `ma_crossover`, `rsi_reversal`, `range_breakout` under `apps/strategies/library/`
+- **Marketdata:** `scan_data_root()`, `load_m1_bars()`, `resample_bars()`, `align_htf()`, `SymbolMap` model
+- **UI:** Strategies list, Data catalog table; dashboard shows dataset count
+- **Tests:** `apps/strategies/tests/test_phase1b.py` (catalog, loader, engine, loader)
+- **Deps:** `pandas` in `requirements.txt`
 
 ## How to run
 
 ```bash
 cd tradeBot
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env              # optional
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py seed_library_strategies
+python manage.py createsuperuser   # if needed
 python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000/ → redirects to login → dashboard after sign-in.
+- http://127.0.0.1:8000/strategies/
+- http://127.0.0.1:8000/data/
+- Admin: `/admin/` → **Symbol map** for MT5 names
 
 ## Last commit
 
-- `8e8b457` — docs: update untilNow and ignore download/ CSV artifacts
-- `2652b47` — Phase 1a: Django scaffold, auth, and Tailwind+HTMX shell
+- (update after commit)
 
-## Next session (Phase 1b)
+## Next session (Phase 1c)
 
-New chat. Attach `@tradeBot/PLAN.md`, `@tradeBot/untilNow.md`, `@tradeBot/AGENTS.md`.
+New chat with `@PLAN.md`, `@untilNow.md`.
 
-> Phase **1b** only: `BaseStrategy`, `IndicatorRegistry`, `SignalEngine`, three library strategies; `marketdata` catalog scanner + M1 loader/resampler wired to `data/` paths (no CSV ingestion in chat). Do **not** start backtest runner (1c).
+> Phase **1c** only: `BacktestRun` model, `BacktestRunner` (bar loop, SL/TP rule per PLAN), optional Celery stub, results UI with **win rate %** and equity chart. Wire strategies + `load_m1_bars` / resample. Do **not** start MT5 agent (Phase 3).
 
 ## Decisions / notes
 
-- Tailwind via CDN for 1a; move to built assets under `static/` when the UI grows.
-- `MetaTrader5` stays out of Django requirements until the Windows agent phase.
-- Workspace parent may be `WorkFlow/`; only edit under `tradeBot/`.
-- Local CSV backtest data stays on disk under `data/`; not in git.
+- Indicators implemented in pure pandas (no `pandas-ta` yet).
+- Catalog bar counts sum CSV line counts (can be slow on first `/data/` load for huge trees; optimize in 1c if needed).
+- `TRADEBOT_DATA_ROOT` = `BASE_DIR / "data"` in settings.

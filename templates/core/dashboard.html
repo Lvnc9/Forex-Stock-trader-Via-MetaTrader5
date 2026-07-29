@@ -7,8 +7,7 @@
   <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 lg:col-span-2">
     <h2 class="text-base font-semibold text-white">Welcome back</h2>
     <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-      TradeBot foundation is running. Next up: Python strategies, local M1 backtests, and MT5 demo deployment per
-      <span class="text-zinc-300">PLAN.md</span>.
+      Strategy engine and local data catalog are wired. Next: backtest runner and results UI (Phase 1c).
     </p>
     <dl class="mt-6 grid gap-4 sm:grid-cols-3">
       <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
@@ -21,33 +20,34 @@
       </div>
       <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
         <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Local datasets</dt>
-        <dd class="mt-1 text-2xl font-semibold tabular-nums text-sky-400">—</dd>
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-sky-400">{{ dataset_count }}</dd>
       </div>
     </dl>
+    <p class="mt-4 text-sm text-zinc-500">
+      <a href="{% url 'strategies:list' %}" class="text-sky-400 hover:text-sky-300">{{ strategy_count }} saved strateg{{ strategy_count|pluralize:"y,ies" }}</a>
+      ·
+      <a href="{% url 'marketdata:catalog' %}" class="text-sky-400 hover:text-sky-300">Data catalog</a>
+    </p>
   </section>
 
   <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
-    <h2 class="text-base font-semibold text-white">Phase 1a checklist</h2>
+    <h2 class="text-base font-semibold text-white">Phase 1 progress</h2>
     <ul class="mt-4 space-y-3 text-sm text-zinc-400">
       <li class="flex items-start gap-2">
         <span class="mt-0.5 text-emerald-400">✓</span>
-        Django project + app layout
+        Django shell + auth (1a)
       </li>
       <li class="flex items-start gap-2">
         <span class="mt-0.5 text-emerald-400">✓</span>
-        Login / session auth
+        BaseStrategy, indicators, library strategies (1b)
       </li>
       <li class="flex items-start gap-2">
         <span class="mt-0.5 text-emerald-400">✓</span>
-        Tailwind + HTMX shell
+        Data catalog + M1 loader (1b)
       </li>
       <li class="flex items-start gap-2">
         <span class="mt-0.5 text-zinc-600">○</span>
-        Strategies &amp; market data (1b)
-      </li>
-      <li class="flex items-start gap-2">
-        <span class="mt-0.5 text-zinc-600">○</span>
-        Backtest runner (1c)
+        Backtest runner + UI (1c)
       </li>
     </ul>
   </section>

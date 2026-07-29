@@ -7,10 +7,10 @@ todos:
     status: completed
   - id: strategy-dsl
     content: Implement Python Strategy protocol, IndicatorRegistry, SignalEngine, strategy loader/params (shared backtest + live)
-    status: pending
+    status: completed
   - id: marketdata
     content: Build marketdata catalog scanner, M1 loader/resampler, SymbolMap model for MT5 names
-    status: pending
+    status: completed
   - id: backtest
     content: Implement BacktestRunner, BacktestRun model, Celery task, results UI with win rate % and equity chart
     status: pending
