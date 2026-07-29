@@ -13,6 +13,21 @@
   <p class="text-sm text-zinc-500">{{ run.start }} → {{ run.end }}</p>
 </div>
 
+{% if run.status == "pending" or run.status == "running" %}
+  <div
+    class="mb-6 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100"
+    hx-get="{% url 'backtest:detail' run.pk %}"
+    hx-trigger="every 2s"
+    hx-select="#backtest-status"
+    hx-target="#backtest-status"
+    hx-swap="outerHTML"
+  >
+    <div id="backtest-status">Status: <strong>{{ run.status }}</strong> — refreshing…</div>
+  </div>
+{% else %}
+  <div id="backtest-status" class="hidden"></div>
+{% endif %}
+
 {% if run.status == "failed" %}
   <div class="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
     {{ run.error_message|default:"Backtest failed." }}

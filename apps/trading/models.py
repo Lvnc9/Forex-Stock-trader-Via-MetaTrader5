@@ -35,3 +35,23 @@ class Deployment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.strategy.name} → {self.agent.name} ({self.status})"
+
+
+class DeploymentEvent(models.Model):
+    """Append-only audit log for deployment lifecycle and agent errors."""
+
+    deployment = models.ForeignKey(
+        Deployment,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    kind = models.CharField(max_length=32)
+    message = models.CharField(max_length=500, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.deployment_id}:{self.kind}"

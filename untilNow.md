@@ -13,7 +13,8 @@ Handoff for the **next agent chat**. Read at start; update at end.
 ## Plan & workflow
 
 - Architecture: [PLAN.md](./PLAN.md)
-- Agent prompts & multi-agent playbook: [docs/WORKFLOW.md](./docs/WORKFLOW.md)
+- Agent prompts: [docs/WORKFLOW.md](./docs/WORKFLOW.md)
+- Data downloads: [docs/DATA.md](./docs/DATA.md)
 - Conventions: [AGENTS.md](./AGENTS.md)
 
 ## Phase status (2026-07-29)
@@ -23,77 +24,42 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | 1 — Backtest foundation | **Done** |
 | 2 — Strategy UX + deploy review | **Done** |
 | 3 — MT5 agent + live (v1) | **Done** |
-| 4 — Data & stocks breadth | **Not started** |
-| Post–Phase 3 polish | Backlog in PLAN.md |
+| 4 — Data & stocks breadth | **Done** |
+| Post–Phase 3 polish slices 0–7 | **Done** |
 
-## What exists (quick map)
+## Polish slices completed this session
 
-| Path | Role |
-| ---- | ---- |
-| `apps/strategies/` | `BaseStrategy`, library, custom upload, loader |
-| `apps/marketdata/` | Catalog, M1 loader, `SymbolMap` (admin today) |
-| `apps/backtest/` | Runner, results UI, compare (sync runs; Celery stub) |
-| `apps/trading/` | Deployments, deploy review, live dashboard |
-| `apps/brokers/` | Agents, token API, `/api/agent/*` |
-| `agent/` | Poll client, `LiveWorker`, `mt5_adapter` (Windows + MT5) |
+| Slice | What |
+| ----- | ---- |
+| 0 | Fixed `agent/mt5_adapter.py` SyntaxError (`self.timeframe_constant`) |
+| 1 | Windows Service / NSSM docs + `agent/scripts/install-service-nssm.ps1` |
+| 2 | Live confirm even if agent offline; API hides unconfirmed live armed deps |
+| 3 | Non-admin Symbol map CRUD at `/data/symbols/` + deploy form map fill |
+| 4a | `download_bars` (dukascopy-node FX majors) |
+| 4b | `download_stocks` (yfinance) + [docs/DATA.md](./docs/DATA.md) |
+| 5 | `DeploymentEvent` audit log on arm/pause/stop + agent errors |
+| 6 | Live/backtest flip + SL/TP via `position_intent` + adapter |
+| 7 | Celery tasks (eager by default) + HTMX refresh on pending backtests |
 
 ## Run
 
-**Web (Mac/Linux/Windows):**
-
 ```bash
 cd tradeBot && source venv/bin/activate
+pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_library_strategies   # first time
 python manage.py runserver
 ```
 
-**Tests:**
+Async backtests (optional): set `CELERY_TASK_ALWAYS_EAGER=False` and `celery -A config worker -l info` with Redis.
 
-```bash
-python manage.py test
-```
-
-**Agent (Windows + MT5, repo root):**
-
-```bash
-pip install -r requirements.txt -r agent/requirements.txt
-cp agent.env.example agent.env   # WEBAPP_URL + AGENT_TOKEN from /broker/
-python -m agent
-```
-
-Mac dev: agent runs heartbeat-only without MetaTrader5.
-
-## Key URLs
-
-| Path | Purpose |
-| ---- | ------- |
-| `/strategies/` | Parameters, custom Python |
-| `/data/` | CSV catalog |
-| `/backtest/` | Run, compare, metrics |
-| `/live/deploy/` | New deployment → review |
-| `/live/` | Deployments, positions, sync |
-| `/broker/` | Create agent, token (once) |
-| `/api/agent/*` | Agent Bearer auth |
+Agent (Windows): see [agent/README.md](./agent/README.md).
 
 ## Last commit
 
-- `55f8444` — docs: mark Phases 1–3 done and add multi-agent workflow guide
-- `4ca3309` — Phase 3: LiveWorker, MT5 adapter, and live trading sync UI
+- (pending push for polish slices)
 
-## Recommended next work (pick one per chat)
+## Recommended next work
 
-1. **Phase 4a** — `download_bars` management command (FX majors, Dukascopy pattern in PLAN).
-2. **Polish A** — Symbol map UI (non-admin) + deploy validation.
-3. **Polish B** — Live/backtest parity (SL/TP, position rules) in `agent/` + docs.
-4. **Polish C** — Celery + HTMX progress for long backtests.
-5. **Polish D** — Windows Service doc / script for `python -m agent`.
-
-Copy a starter prompt from [docs/WORKFLOW.md](./docs/WORKFLOW.md).
-
-## Decisions (do not undo without reason)
-
-- Agent tokens: SHA-256 hash; plain token shown once at creation.
-- Online agent: heartbeat within `AGENT_HEARTBEAT_TTL_SECONDS` (default 90s).
-- `MetaTrader5` import **only** under `agent/`, never in Django apps.
-- Market CSVs under `data/` — not in git (see `.gitignore`).
+- Smoke-test Windows agent + demo MT5 after Slice 0 fix
+- Library strategies that emit SL/TP levels
+- Hedge-mode / multi-position MT5 accounts if needed

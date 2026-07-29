@@ -47,3 +47,42 @@ On Mac/Linux without MT5, the agent runs in **heartbeat-only** mode for API test
 ## Mac web + Windows agent (split)
 
 Set `WEBAPP_URL=https://your-vps-or-lan-ip:8000` on Windows. No inbound ports on the trading PC.
+
+## Run as a Windows Service (optional)
+
+For 24/7 trading on a VPS, keep MT5 logged in and run the agent as a service so it restarts after reboot.
+
+### Option A — NSSM (recommended)
+
+1. Download [NSSM](https://nssm.cc/download) and extract `nssm.exe`.
+2. From an **Administrator** PowerShell in the repo root:
+
+```powershell
+.\agent\scripts\install-service-nssm.ps1 `
+  -NssmPath "C:\tools\nssm\win64\nssm.exe" `
+  -RepoRoot (Get-Location).Path `
+  -PythonExe (Join-Path (Get-Location) "venv\Scripts\python.exe")
+```
+
+Or manually:
+
+```powershell
+nssm install TradeBotAgent "C:\path\to\repo\venv\Scripts\python.exe"
+nssm set TradeBotAgent AppDirectory "C:\path\to\repo"
+nssm set TradeBotAgent AppParameters "-m agent"
+nssm set TradeBotAgent AppEnvironmentExtra "WEBAPP_URL=http://127.0.0.1:8000" "AGENT_TOKEN=YOUR_TOKEN"
+nssm set TradeBotAgent Start SERVICE_AUTO_START
+nssm start TradeBotAgent
+```
+
+Logs: `nssm set TradeBotAgent AppStdout C:\path\to\repo\agent\logs\stdout.log` (and AppStderr).
+
+### Option B — Task Scheduler
+
+1. Create a basic task → **When the computer starts**.
+2. Action: Start a program → `C:\path\to\repo\venv\Scripts\python.exe`
+3. Arguments: `-m agent`
+4. Start in: `C:\path\to\repo`
+5. Check **Run whether user is logged on or not** (MT5 session must still be available for Algo Trading).
+
+Unload: `nssm stop TradeBotAgent` then `nssm remove TradeBotAgent confirm`.

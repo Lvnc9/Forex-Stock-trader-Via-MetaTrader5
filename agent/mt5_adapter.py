@@ -84,7 +84,7 @@ class MT5BrokerAdapter:
 
         if not self._mt5:
             return pd.DataFrame()
-        tf = self timeframe_constant(timeframe)
+        tf = self.timeframe_constant(timeframe)
         if tf is None:
             return pd.DataFrame()
         rates = self._mt5.copy_rates_from_pos(symbol, tf, 0, count)
@@ -137,7 +137,16 @@ class MT5BrokerAdapter:
             )
         return rows
 
-    def execute_signal(self, symbol: str, action: str, lot: float) -> dict[str, Any]:
+    def execute_signal(
+        self,
+        symbol: str,
+        action: str,
+        lot: float,
+        *,
+        stop_loss: float | None = None,
+        take_profit: float | None = None,
+        open_side: str | None = None,
+    ) -> dict[str, Any]:
         if not self._mt5:
             return {"ok": False, "error": "mt5_unavailable"}
         symbol_info = self._mt5.symbol_info(symbol)
@@ -153,6 +162,13 @@ class MT5BrokerAdapter:
         if action in ("exit", "close_all"):
             return self._close_symbol(symbol)
 
+        # Flip: close opposite before opening (matches backtester signal_reverse).
+        want = "long" if action == "enter_long" else "short"
+        if open_side and open_side != want:
+            closed = self._close_symbol(symbol)
+            if not closed.get("ok"):
+                return closed
+
         request = {
             "action": self._mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
@@ -165,11 +181,24 @@ class MT5BrokerAdapter:
             "type_time": self._mt5.ORDER_TIME_GTC,
             "type_filling": self._mt5.ORDER_FILLING_IOC,
         }
+        if stop_loss is not None:
+            request["sl"] = float(stop_loss)
+        if take_profit is not None:
+            request["tp"] = float(take_profit)
         result = self._mt5.order_send(request)
         if result is None:
             return {"ok": False, "error": str(self._mt5.last_error())}
         ok = result.retcode == self._mt5.TRADE_RETCODE_DONE
         return {"ok": ok, "retcode": result.retcode, "order": result.order}
+
+    def open_side_for(self, symbol: str) -> str | None:
+        if not self._mt5:
+            return None
+        positions = self._mt5.positions_get(symbol=symbol)
+        if not positions:
+            return None
+        # First position side (netting/hedging simplified for v1)
+        return "long" if positions[0].type == 0 else "short"
 
     def _close_symbol(self, symbol: str) -> dict[str, Any]:
         positions = self._mt5.positions_get(symbol=symbol)

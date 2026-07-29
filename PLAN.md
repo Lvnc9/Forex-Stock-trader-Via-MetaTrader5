@@ -25,10 +25,10 @@ todos:
     status: completed
   - id: windows-agent
     content: tradebot-agent package, Windows setup docs, agent token flow in Broker UI, optional Windows Service
-    status: in_progress
+    status: completed
   - id: data-extend
     content: Management command to download FX majors; document/add stock data path (yfinance or MT5)
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open (Phase 4 + polish):** `download_bars` management command, broader FX/stock data, non-admin symbol-map UI, live/backtest parity (SL/TP, position rules), optional Celery for long backtests, Windows Service docs for the agent. See [Post–Phase 3 backlog](#postphase-3-backlog).
+**Still open:** none of the original Phase 4 / polish backlog items — see completed table below. Further hardening (hedging accounts, richer SL/TP from library strategies) is optional.
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
@@ -506,27 +506,27 @@ Interaction style: **server-rendered Django templates + HTMX** for forms and run
 - Agent API (`/api/agent/*`), Bearer token auth, Broker UI (create agent, online status).
 - `Deployment` lifecycle (draft → armed / paused / stopped); `/live/` sync UI (positions, deals, errors).
 - `agent/live_worker.py` + `mt5_adapter.py`: new-bar loop, shared strategy code, market orders.
-- Setup: [agent/README.md](agent/README.md), `agent.env.example`. Optional Windows Service **not** implemented yet.
+- Setup: [agent/README.md](agent/README.md), `agent.env.example`, Windows Service / NSSM docs + `agent/scripts/install-service-nssm.ps1`.
 
-### Phase 4 — Data & stocks breadth — **next**
+### Phase 4 — Data & stocks breadth — **done (v1)**
 
 - FX pair downloads via Dukascopy management command (`download_bars`).
-- Stock symbols via yfinance daily/intraday (or MT5 history where available); document limitations vs M1 forex CFD data.
+- Stock symbols via `download_stocks` (yfinance); documented limitations vs M1 forex CFD data.
 
 ---
 
 ## Post–Phase 3 backlog
 
-Prioritize with [untilNow.md](untilNow.md). Not required for core success criteria.
+Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in polish slices.
 
-| Item | Area | Goal |
-| ---- | ---- | ---- |
-| Live/backtest parity | `agent/`, `apps/backtest/` | SL/TP on broker, position flip rules aligned with backtester |
-| Symbol map UX | `apps/marketdata/` | Editor outside Django admin; validate before deploy |
-| Deployment event log | `apps/trading/` | Auditable state changes + agent errors |
-| Celery backtests | `apps/backtest/tasks.py` | Async long runs + HTMX progress (Redis optional) |
-| Windows Service | `agent/` docs | Run agent as service on trading VPS |
-| Phase 4 data | management command | FX majors + stock path per plan |
+| Item | Area | Goal | Status |
+| ---- | ---- | ---- | ------ |
+| Live/backtest parity | `agent/`, `apps/strategies/position_intent.py` | SL/TP on broker, flip rules aligned | **done (v1)** |
+| Symbol map UX | `apps/marketdata/` | Editor outside Django admin; validate before deploy | **done** |
+| Deployment event log | `apps/trading/` | Auditable state changes + agent errors | **done** |
+| Celery backtests | `apps/backtest/tasks.py` | Async long runs + HTMX progress (eager default) | **done** |
+| Windows Service | `agent/` docs | Run agent as service on trading VPS | **done** |
+| Phase 4 data | management command | FX majors + stock path per plan | **done** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 

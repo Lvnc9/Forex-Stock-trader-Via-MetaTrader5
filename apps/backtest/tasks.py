@@ -1,13 +1,20 @@
 """
-Celery integration stub — backtests run synchronously in the web process for Phase 1c.
+Backtest task queue.
 
-When Celery is configured later, replace the call site to delay ``run_backtest_task``.
+Default: CELERY_TASK_ALWAYS_EAGER=True (sync, no Redis needed).
+Production async: set CELERY_TASK_ALWAYS_EAGER=False and run:
+  celery -A config worker -l info
 """
+
+from __future__ import annotations
+
+from celery import shared_task
 
 from apps.backtest.models import BacktestRun
 from apps.backtest.services import execute_backtest
 
 
+@shared_task(name="backtest.run")
 def run_backtest_task(run_id: int) -> int:
     run = BacktestRun.objects.get(pk=run_id)
     execute_backtest(run)
@@ -15,5 +22,10 @@ def run_backtest_task(run_id: int) -> int:
 
 
 def enqueue_backtest(run: BacktestRun) -> BacktestRun:
-    """Run now (sync). Swap for ``run_backtest_task.delay(run.pk)`` when Celery is enabled."""
-    return execute_backtest(run)
+    """Queue (or eagerly run) a backtest. Returns the run after sync eager mode."""
+    from django.conf import settings
+
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", True):
+        return execute_backtest(run)
+    run_backtest_task.delay(run.pk)
+    return run

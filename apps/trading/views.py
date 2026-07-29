@@ -17,6 +17,9 @@ class DeploymentListView(ListView):
     template_name = "trading/deployments.html"
     context_object_name = "deployments"
 
+    def get_queryset(self):
+        return Deployment.objects.select_related("strategy", "agent").prefetch_related("events")
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["agent_feeds"] = []
@@ -59,7 +62,7 @@ class DeploymentReviewView(View):
 
     def get(self, request, pk):
         deployment = get_object_or_404(Deployment, pk=pk)
-        requires_live = deployment.agent.is_live_account and deployment.agent.is_online
+        requires_live = deployment.agent.is_live_account
         form = DeployConfirmForm(requires_live_confirm=requires_live)
         last_bt = last_backtest_for(deployment.strategy, deployment.catalog_slug)
         return render(
@@ -75,7 +78,7 @@ class DeploymentReviewView(View):
 
     def post(self, request, pk):
         deployment = get_object_or_404(Deployment, pk=pk)
-        requires_live = deployment.agent.is_live_account and deployment.agent.is_online
+        requires_live = deployment.agent.is_live_account
         form = DeployConfirmForm(request.POST, requires_live_confirm=requires_live)
         if not form.is_valid():
             last_bt = last_backtest_for(deployment.strategy, deployment.catalog_slug)
@@ -92,7 +95,18 @@ class DeploymentReviewView(View):
 
         deployment.status = Deployment.Status.ARMED
         deployment.live_confirmed = bool(form.cleaned_data.get("live_confirm"))
+        if requires_live and not deployment.live_confirmed:
+            messages.error(request, "Live account confirmation is required.")
+            return redirect("trading:review", pk=deployment.pk)
         deployment.save(update_fields=["status", "live_confirmed", "updated_at"])
+        from apps.trading.events import record_event
+
+        record_event(
+            deployment,
+            "armed",
+            "Deployment armed for agent poll.",
+            {"live_confirmed": deployment.live_confirmed},
+        )
         messages.success(request, "Deployment armed. The agent will pick it up on the next poll.")
         return redirect("trading:list")
 
@@ -103,6 +117,9 @@ class DeploymentPauseView(View):
         deployment = get_object_or_404(Deployment, pk=pk)
         deployment.status = Deployment.Status.PAUSED
         deployment.save(update_fields=["status", "updated_at"])
+        from apps.trading.events import record_event
+
+        record_event(deployment, "paused", "Paused by user.")
         return redirect("trading:list")
 
 
@@ -115,6 +132,9 @@ class DeploymentRearmView(View):
             return redirect("trading:list")
         deployment.status = Deployment.Status.DRAFT
         deployment.save(update_fields=["status", "updated_at"])
+        from apps.trading.events import record_event
+
+        record_event(deployment, "draft", "Returned to draft for re-review.")
         return redirect("trading:review", pk=deployment.pk)
 
 
@@ -124,4 +144,7 @@ class DeploymentStopView(View):
         deployment = get_object_or_404(Deployment, pk=pk)
         deployment.status = Deployment.Status.STOPPED
         deployment.save(update_fields=["status", "updated_at"])
+        from apps.trading.events import record_event
+
+        record_event(deployment, "stopped", "Stopped by user.")
         return redirect("trading:list")

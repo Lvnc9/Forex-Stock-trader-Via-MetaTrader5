@@ -49,6 +49,18 @@
               {% endif %}
             </td>
           </tr>
+          {% with recent=d.events.all|slice:":3" %}
+            {% if recent %}
+              <tr class="bg-zinc-950/40">
+                <td colspan="6" class="px-4 py-2 text-xs text-zinc-500">
+                  Events:
+                  {% for e in recent %}
+                    <span class="mr-3"><span class="text-zinc-400">{{ e.kind }}</span> {{ e.message|truncatechars:40 }}</span>
+                  {% endfor %}
+                </td>
+              </tr>
+            {% endif %}
+          {% endwith %}
         {% endfor %}
       </tbody>
     </table>

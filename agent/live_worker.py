@@ -10,6 +10,7 @@ ensure_repo_root()
 from apps.strategies.context import BarContext  # noqa: E402
 from apps.strategies.indicators.registry import IndicatorRegistry  # noqa: E402
 from apps.strategies.loader import instantiate_strategy  # noqa: E402
+from apps.strategies.position_intent import resolve_signal_intent  # noqa: E402
 from apps.strategies.signals import Signal  # noqa: E402
 
 
@@ -74,7 +75,22 @@ class LiveWorker:
         signal: Signal | None = strategy.on_bar(ctx)
         action_result = None
         if signal is not None:
-            action_result = self.adapter.execute_signal(symbol, signal.action.value, lot)
+            open_side = None
+            if hasattr(self.adapter, "open_side_for"):
+                open_side = self.adapter.open_side_for(symbol)
+            intent = resolve_signal_intent(signal, open_side)
+            if intent.close_first and not intent.open_side:
+                action_result = self.adapter.execute_signal(symbol, "exit", lot)
+            elif intent.open_side:
+                action = "enter_long" if intent.open_side == "long" else "enter_short"
+                action_result = self.adapter.execute_signal(
+                    symbol,
+                    action,
+                    lot,
+                    stop_loss=intent.stop_loss,
+                    take_profit=intent.take_profit,
+                    open_side=open_side,
+                )
 
         runtime.last_bar_iso = last_iso
         return {

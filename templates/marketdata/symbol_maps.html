@@ -1,0 +1,45 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Symbol maps{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <p class="text-sm text-zinc-400">Map local catalog slugs to broker MT5 symbol names (no admin required).</p>
+  <a href="{% url 'marketdata:symbol_map_create' %}" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">Add map</a>
+</div>
+
+{% if maps %}
+  <div class="overflow-hidden rounded-xl border border-zinc-800">
+    <table class="min-w-full divide-y divide-zinc-800 text-sm">
+      <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
+        <tr>
+          <th class="px-4 py-3">Catalog slug</th>
+          <th class="px-4 py-3">Dukascopy id</th>
+          <th class="px-4 py-3">MT5 symbol</th>
+          <th class="px-4 py-3">Notes</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-800">
+        {% for m in maps %}
+          <tr>
+            <td class="px-4 py-3 font-mono text-white">{{ m.catalog_slug }}</td>
+            <td class="px-4 py-3 text-zinc-400">{{ m.dukascopy_id|default:"—" }}</td>
+            <td class="px-4 py-3 font-medium text-sky-300">{{ m.mt5_symbol }}</td>
+            <td class="px-4 py-3 text-zinc-500">{{ m.notes|default:"" }}</td>
+            <td class="px-4 py-3 text-right space-x-3">
+              <a href="{% url 'marketdata:symbol_map_edit' m.pk %}" class="text-xs text-sky-400">Edit</a>
+              <form method="post" action="{% url 'marketdata:symbol_map_delete' m.pk %}" class="inline" onsubmit="return confirm('Delete map?');">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-rose-400">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="rounded-xl border border-dashed border-zinc-700 px-4 py-10 text-center text-sm text-zinc-500">No symbol maps yet.</p>
+{% endif %}
+{% endblock %}

@@ -23,7 +23,7 @@
 
   <section>
     <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Symbol map</h2>
-    <p class="mb-2 text-sm text-zinc-400">Map catalog slugs → MT5 symbols in <a href="/admin/marketdata/symbolmap/" class="text-sky-400">Django admin</a>.</p>
+    <p class="mb-2 text-sm text-zinc-400">Map catalog slugs → MT5 symbols in <a href="{% url 'marketdata:symbol_maps' %}" class="text-sky-400">Data → Symbol maps</a>.</p>
     <ul class="text-sm text-zinc-500">
       {% for m in symbol_maps %}
         <li class="font-mono text-xs text-zinc-400">{{ m.catalog_slug }} → {{ m.mt5_symbol|default:"?" }}</li>

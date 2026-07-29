@@ -6,6 +6,10 @@
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
   <div>
     <p class="text-sm text-zinc-400">Local M1 OHLC datasets under <code class="text-zinc-300">data/&lt;slug&gt;/</code> (not committed to git).</p>
+    <p class="mt-2 text-sm"><a href="{% url 'marketdata:symbol_maps' %}" class="text-sky-400 hover:text-sky-300">Symbol maps →</a>
+      <span class="text-zinc-600"> · </span>
+      <span class="text-zinc-500">Download FX: <code class="text-zinc-400">python manage.py download_bars --help</code></span>
+    </p>
   </div>
   <dl class="flex gap-6 text-sm">
     <div>
@@ -51,7 +55,7 @@
                 {% if row.symbol_map and row.symbol_map.mt5_symbol %}
                   {{ row.symbol_map.mt5_symbol }}
                 {% else %}
-                  <span class="text-zinc-600">Map in admin</span>
+                  <a href="{% url 'marketdata:symbol_maps' %}" class="text-sky-400">Map symbols</a>
                 {% endif %}
               </td>
             </tr>

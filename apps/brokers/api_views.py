@@ -46,6 +46,29 @@ def sync(request):
         if dep_id is None:
             continue
         Deployment.objects.filter(pk=dep_id, agent=agent).update(last_agent_report=item)
+        status = item.get("status")
+        if status in ("strategy_error", "no_data") or item.get("order", {}).get("ok") is False:
+            from apps.trading.events import record_event
+            from apps.trading.models import Deployment as DepModel
+
+            dep = DepModel.objects.filter(pk=dep_id, agent=agent).first()
+            if dep:
+                record_event(
+                    dep,
+                    "agent_error",
+                    f"Agent reported {status or 'order_error'}",
+                    item,
+                )
+
+    for err in payload.get("errors") or []:
+        if not isinstance(err, str):
+            continue
+        # Attach first matching armed dep's event stream if possible
+        dep = Deployment.objects.filter(agent=agent, status=Deployment.Status.ARMED).first()
+        if dep:
+            from apps.trading.events import record_event
+
+            record_event(dep, "agent_error", err[:500])
 
     return JsonResponse({"ok": True})
 
@@ -59,6 +82,11 @@ def deployments(request):
         agent=agent,
         status=Deployment.Status.ARMED,
     ).select_related("strategy")
+
+    # Live accounts only receive deployments that were explicitly live-confirmed.
+    if agent.is_live_account:
+        qs = qs.filter(live_confirmed=True)
+
     items = []
     for dep in qs:
         items.append(

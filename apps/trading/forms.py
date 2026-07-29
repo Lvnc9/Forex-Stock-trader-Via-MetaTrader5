@@ -26,6 +26,7 @@ class DeploymentDraftForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["strategy"].queryset = Strategy.objects.all()
         self.fields["agent"].queryset = TradingAgent.objects.all()
+        self.fields["mt5_symbol"].required = False
         slugs = [c.slug for c in scan_data_root(data_root)] if data_root else []
         self.fields["catalog_slug"] = forms.ChoiceField(
             choices=[(s, s) for s in slugs] or [("", "—")],
@@ -41,15 +42,19 @@ class DeploymentDraftForm(forms.ModelForm):
         cleaned = super().clean()
         slug = cleaned.get("catalog_slug")
         symbol = (cleaned.get("mt5_symbol") or "").strip()
-        if slug and not symbol:
+        if slug:
             sym_map = SymbolMap.objects.filter(catalog_slug=slug).first()
-            if sym_map and sym_map.mt5_symbol:
-                cleaned["mt5_symbol"] = sym_map.mt5_symbol
+            if not sym_map or not (sym_map.mt5_symbol or "").strip():
+                if not symbol:
+                    self.add_error(
+                        "mt5_symbol",
+                        "Create a Symbol map for this catalog slug (Data → Symbol maps) "
+                        "or enter the MT5 symbol manually.",
+                    )
+            elif not symbol:
+                cleaned["mt5_symbol"] = sym_map.mt5_symbol.strip()
             else:
-                self.add_error(
-                    "mt5_symbol",
-                    "Required, or set MT5 symbol in Admin → Symbol map for this slug.",
-                )
+                cleaned["mt5_symbol"] = symbol
         return cleaned
 
 

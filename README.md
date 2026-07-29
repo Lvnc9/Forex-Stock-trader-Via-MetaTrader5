@@ -23,12 +23,15 @@ Open http://127.0.0.1:8000/ and sign in.
 | Path | Purpose |
 | ---- | ------- |
 | `/strategies/` | Parameters, custom Python |
-| `/data/` | Local CSV catalog |
+| `/data/` | CSV catalog |
+| `/data/symbols/` | Catalog → MT5 symbol maps |
 | `/backtest/` | Run, compare, win rate + equity chart |
-| `/live/` | Deployments, live sync |
+| `/live/` | Deployments, live sync, event snippets |
 | `/broker/` | MT5 agents, API tokens |
 
-**Windows agent:** [agent/README.md](./agent/README.md)
+**Downloads:** [docs/DATA.md](./docs/DATA.md) (`download_bars`, `download_stocks`)
+
+**Windows agent:** [agent/README.md](./agent/README.md) (includes Windows Service / NSSM)
 
 ## Layout
 

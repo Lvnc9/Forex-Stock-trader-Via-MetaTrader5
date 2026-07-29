@@ -89,6 +89,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 TRADEBOT_DATA_ROOT = BASE_DIR / "data"
 AGENT_HEARTBEAT_TTL_SECONDS = 90
 
+# Celery — optional. Without Redis, tasks run eagerly in-process.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=True)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
 LOGIN_URL = "core:login"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "core:login"
