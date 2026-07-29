@@ -34,9 +34,19 @@ def sync(request):
         "positions": payload.get("positions", []),
         "deals": payload.get("deals", []),
         "errors": payload.get("errors", []),
+        "deployment_state": payload.get("deployment_state", []),
     }
     agent.last_sync_at = timezone.now()
     agent.save(update_fields=["sync_snapshot", "last_sync_at"])
+
+    for item in payload.get("deployment_state") or []:
+        if not isinstance(item, dict):
+            continue
+        dep_id = item.get("id")
+        if dep_id is None:
+            continue
+        Deployment.objects.filter(pk=dep_id, agent=agent).update(last_agent_report=item)
+
     return JsonResponse({"ok": True})
 
 

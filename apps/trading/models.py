@@ -26,6 +26,7 @@ class Deployment(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     live_confirmed = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
+    last_agent_report = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

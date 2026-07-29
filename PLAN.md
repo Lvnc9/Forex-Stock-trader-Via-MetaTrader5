@@ -19,10 +19,10 @@ todos:
     status: completed
   - id: mt5-broker
     content: TradingAgent model, agent API endpoints, token auth, Broker UI online status
-    status: in_progress
+    status: completed
   - id: live-trading
     content: Deployment model, agent API (pull/heartbeat), LiveWorker on Windows agent, trading dashboard
-    status: pending
+    status: in_progress
   - id: windows-agent
     content: tradebot-agent package, Windows setup docs, agent token flow in Broker UI, optional Windows Service
     status: pending

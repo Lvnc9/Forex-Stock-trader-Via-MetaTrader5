@@ -1,72 +1,51 @@
 # TradeBot progress (`untilNow`)
 
-Handoff file for the **next agent chat**. Update at the end of every session.
+## GitHub
 
-## GitHub repository
+[github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) · `git push origin main`
 
-| | |
-| --- | --- |
-| **Display name** | Forex-Stock trader Via MetaTrader5 |
-| **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
-| **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Default branch** | `main` |
+## Current state (2026-07-29)
 
-## Plan reference
+| Phase | Status |
+| ----- | ------ |
+| 1 — Backtest foundation | Done |
+| 2 — Strategy UX + deploy review | Done |
+| 3 — MT5 agent + live | **Mostly done** — LiveWorker + sync UI; polish/logs optional |
 
-- [PLAN.md](./PLAN.md)
+## Completed this session (Phase 3 cont.)
 
-## Current state (last updated: 2026-07-29)
+- **`agent/live_worker.py`** — new-bar detection, `instantiate_strategy` + `on_bar`, MT5 market orders
+- **`agent/mt5_adapter.py`** — initialize, rates → pandas, positions/deals, order send/close (MetaTrader5 **agent only**)
+- **`agent/client.py`** — full poll: heartbeat → deployments → worker → sync
+- **API sync** — stores `deployment_state` on `Deployment.last_agent_report`
+- **`/live/`** — open positions, recent deals, agent errors; re-arm paused → review
+- **`agent.env.example`**, expanded `agent/README.md`
 
-| Area | Status |
-| ---- | ------ |
-| Phase 1 (backtest foundation) | **Done** |
-| Phase 2 (strategy UX + deploy review) | **Done** |
-| Phase 3 (MT5 agent + broker) | **In progress** — API + Broker UI + stub agent; live worker TBD |
+## Run
 
-## Completed this session
-
-- **Deploy review:** `/live/deploy/` → `/live/<id>/review/` (params, last backtest link, live-account confirm)
-- **Broker:** `TradingAgent` + token (hashed), `/broker/` UI, one-time token display
-- **Agent API:** `POST /api/agent/heartbeat`, `POST /api/agent/sync`, `GET /api/agent/deployments` (Bearer token)
-- **Live trading:** `Deployment` model (draft/armed/paused/stopped), list + pause/stop
-- **Navbar:** MT5 connected + Demo/Live from agent heartbeat
-- **Windows stub:** `agent/` poll client (`python -m agent` from repo root + `agent.env`)
-
-## How to run
+**Web (any OS):**
 
 ```bash
-cd tradeBot && source venv/bin/activate
-python manage.py migrate
-python manage.py runserver
+source venv/bin/activate && python manage.py migrate && python manage.py runserver
 ```
 
-**Try agent stub (second terminal):**
+**Agent (Windows + MT5, from repo root):**
 
 ```bash
-# agent.env: WEBAPP_URL=http://127.0.0.1:8000  AGENT_TOKEN=<from /broker/>
-pip install -r agent/requirements.txt
+pip install -r requirements.txt -r agent/requirements.txt
+cp agent.env.example agent.env   # set WEBAPP_URL + AGENT_TOKEN
 python -m agent
 ```
 
-## URLs
-
-| Path | Purpose |
-| ---- | ------- |
-| `/broker/` | Create agents, copy token |
-| `/live/` | Deployments |
-| `/live/deploy/` | New deployment → review |
-| `/api/agent/*` | Windows agent (no session auth) |
+Without MetaTrader5 (Mac dev), agent still heartbeats and syncs empty positions.
 
 ## Last commit
 
-- `062d213` — Phase 2–3: deploy review, broker UI, agent API, stub agent
+- (after push)
 
-## Next session
+## Next (optional)
 
-- **Phase 3 continuation:** `LiveWorker` on agent (bars + `SignalEngine` + MT5 orders), deployment sync UI, positions table from agent sync payload
-- **Not in Django:** `MetaTrader5` import stays in `agent/` only
-
-## Decisions / notes
-
-- Agent tokens stored as SHA-256 hash; plain token shown once at creation.
-- Online = heartbeat within `AGENT_HEARTBEAT_TTL_SECONDS` (90s default).
+- Agent: SL/TP on broker side, position flip rules matching backtester
+- UI: deployment event log, symbol map editor (non-admin)
+- Phase 4: `download_bars` management command, FX/stock data breadth
+- `windows-agent` package polish (Windows Service docs)

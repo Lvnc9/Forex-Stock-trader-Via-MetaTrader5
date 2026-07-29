@@ -4,18 +4,19 @@
 
 {% block content %}
 <div class="mb-6 flex justify-between gap-4">
-  <p class="text-sm text-zinc-400">Armed deployments are pulled by the Windows agent over HTTPS.</p>
+  <p class="text-sm text-zinc-400">Armed deployments run on the Windows agent each new bar. Positions sync from MT5.</p>
   <a href="{% url 'trading:deploy' %}" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">New deployment</a>
 </div>
 
 {% if deployments %}
-  <div class="overflow-hidden rounded-xl border border-zinc-800">
+  <div class="mb-10 overflow-hidden rounded-xl border border-zinc-800">
     <table class="min-w-full divide-y divide-zinc-800 text-sm">
       <thead class="bg-zinc-900/80 text-left text-xs uppercase text-zinc-500">
         <tr>
           <th class="px-4 py-3">Strategy</th>
           <th class="px-4 py-3">Agent</th>
           <th class="px-4 py-3">Symbol</th>
+          <th class="px-4 py-3">Agent report</th>
           <th class="px-4 py-3">Status</th>
           <th class="px-4 py-3"></th>
         </tr>
@@ -26,6 +27,12 @@
             <td class="px-4 py-3 text-white">{{ d.strategy.name }}</td>
             <td class="px-4 py-3 text-zinc-400">{{ d.agent.name }}</td>
             <td class="px-4 py-3 font-mono text-xs">{{ d.mt5_symbol }} · {{ d.timeframe }}</td>
+            <td class="px-4 py-3 text-xs text-zinc-500">
+              {% if d.last_agent_report.last_bar %}
+                bar {{ d.last_agent_report.last_bar|truncatechars:22 }}
+                {% if d.last_agent_report.signal %} · {{ d.last_agent_report.signal }}{% endif %}
+              {% else %}—{% endif %}
+            </td>
             <td class="px-4 py-3 capitalize">{{ d.status }}</td>
             <td class="px-4 py-3 text-right space-x-2">
               {% if d.status == "draft" %}
@@ -33,6 +40,9 @@
               {% endif %}
               {% if d.status == "armed" %}
                 <form method="post" action="{% url 'trading:pause' d.pk %}" class="inline">{% csrf_token %}<button class="text-zinc-400">Pause</button></form>
+              {% endif %}
+              {% if d.status == "paused" %}
+                <form method="post" action="{% url 'trading:rearm' d.pk %}" class="inline">{% csrf_token %}<button class="text-sky-400">Re-arm</button></form>
               {% endif %}
               {% if d.status != "stopped" %}
                 <form method="post" action="{% url 'trading:stop' d.pk %}" class="inline">{% csrf_token %}<button class="text-rose-400">Stop</button></form>
@@ -44,6 +54,43 @@
     </table>
   </div>
 {% else %}
-  <p class="text-sm text-zinc-500">No deployments. <a href="{% url 'trading:deploy' %}" class="text-sky-400">Create one</a>.</p>
+  <p class="mb-10 text-sm text-zinc-500">No deployments. <a href="{% url 'trading:deploy' %}" class="text-sky-400">Create one</a>.</p>
 {% endif %}
+
+{% for feed in agent_feeds %}
+  <section class="mb-8">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ feed.agent.name }} · MT5 sync</h2>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="rounded-xl border border-zinc-800 p-4">
+        <h3 class="text-xs font-medium text-zinc-400">Open positions</h3>
+        {% if feed.positions %}
+          <ul class="mt-2 space-y-1 text-xs font-mono text-zinc-300">
+            {% for p in feed.positions %}
+              <li>{{ p.symbol }} {{ p.type }} vol={{ p.volume }} pnl={{ p.profit }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="mt-2 text-sm text-zinc-600">None reported.</p>
+        {% endif %}
+      </div>
+      <div class="rounded-xl border border-zinc-800 p-4">
+        <h3 class="text-xs font-medium text-zinc-400">Recent deals</h3>
+        {% if feed.deals %}
+          <ul class="mt-2 space-y-1 text-xs font-mono text-zinc-300">
+            {% for d in feed.deals %}
+              <li>{{ d.symbol }} profit={{ d.profit }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="mt-2 text-sm text-zinc-600">None in last sync.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if feed.errors %}
+      <p class="mt-2 text-xs text-amber-400">{{ feed.errors|join:" · " }}</p>
+    {% endif %}
+  </section>
+{% empty %}
+  <p class="text-sm text-zinc-600">Register an agent under <a href="{% url 'brokers:agents' %}" class="text-sky-400">Broker</a> and run <code class="text-zinc-400">python -m agent</code> on Windows.</p>
+{% endfor %}
 {% endblock %}

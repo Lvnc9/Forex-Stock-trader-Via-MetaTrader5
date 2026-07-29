@@ -6,6 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import ListView
 
+from apps.brokers.models import TradingAgent
 from apps.trading.forms import DeployConfirmForm, DeploymentDraftForm, last_backtest_for
 from apps.trading.models import Deployment
 
@@ -15,6 +16,21 @@ class DeploymentListView(ListView):
     model = Deployment
     template_name = "trading/deployments.html"
     context_object_name = "deployments"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["agent_feeds"] = []
+        for agent in TradingAgent.objects.all():
+            sync = agent.sync_snapshot or {}
+            ctx["agent_feeds"].append(
+                {
+                    "agent": agent,
+                    "positions": sync.get("positions", []),
+                    "deals": sync.get("deals", [])[:15],
+                    "errors": sync.get("errors", [])[:8],
+                }
+            )
+        return ctx
 
 
 @method_decorator(login_required, name="dispatch")
@@ -88,6 +104,18 @@ class DeploymentPauseView(View):
         deployment.status = Deployment.Status.PAUSED
         deployment.save(update_fields=["status", "updated_at"])
         return redirect("trading:list")
+
+
+@method_decorator(login_required, name="dispatch")
+class DeploymentRearmView(View):
+    def post(self, request, pk):
+        deployment = get_object_or_404(Deployment, pk=pk)
+        if deployment.status != Deployment.Status.PAUSED:
+            messages.warning(request, "Only paused deployments can be re-armed via review.")
+            return redirect("trading:list")
+        deployment.status = Deployment.Status.DRAFT
+        deployment.save(update_fields=["status", "updated_at"])
+        return redirect("trading:review", pk=deployment.pk)
 
 
 @method_decorator(login_required, name="dispatch")

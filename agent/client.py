@@ -6,6 +6,12 @@ from pathlib import Path
 
 import requests
 
+from agent.bootstrap import ensure_repo_root
+from agent.live_worker import LiveWorker
+from agent.mt5_adapter import MT5BrokerAdapter
+
+ensure_repo_root()
+
 POLL_SECONDS = 30
 
 
@@ -28,22 +34,56 @@ def _load_env() -> tuple[str, str]:
 def run_forever() -> None:
     base_url, token = _load_env()
     headers = {"Authorization": f"Bearer {token}"}
+    adapter = MT5BrokerAdapter()
+    if adapter.available:
+        ok = adapter.connect()
+        print(f"MetaTrader5 initialize: {'ok' if ok else 'failed'}")
+    else:
+        print("MetaTrader5 package not installed — heartbeat-only mode (dev/Mac).")
+
+    worker = LiveWorker(adapter=adapter)
     print(f"TradeBot agent → {base_url} (poll every {POLL_SECONDS}s)")
 
-    while True:
-        try:
-            hb = requests.post(
-                f"{base_url}/api/agent/heartbeat",
-                json={"mt5_connected": False, "account": {}},
-                headers=headers,
-                timeout=15,
-            )
-            if hb.status_code == 200:
-                dep = requests.get(f"{base_url}/api/agent/deployments", headers=headers, timeout=15)
-                count = len(dep.json().get("deployments", [])) if dep.ok else 0
-                print(f"heartbeat ok · armed deployments: {count}")
-            else:
-                print(f"heartbeat failed: {hb.status_code}")
-        except requests.RequestException as exc:
-            print(f"poll error: {exc}")
-        time.sleep(POLL_SECONDS)
+    try:
+        while True:
+            worker.errors.clear()
+            try:
+                account = adapter.account_info_dict() if adapter.connected else {}
+                hb = requests.post(
+                    f"{base_url}/api/agent/heartbeat",
+                    json={"mt5_connected": adapter.connected, "account": account},
+                    headers=headers,
+                    timeout=30,
+                )
+                deployments: list[dict] = []
+                if hb.status_code == 200:
+                    dep_resp = requests.get(
+                        f"{base_url}/api/agent/deployments",
+                        headers=headers,
+                        timeout=30,
+                    )
+                    if dep_resp.ok:
+                        deployments = dep_resp.json().get("deployments", [])
+
+                state = worker.process_deployments(deployments)
+                sync_body = {
+                    "positions": adapter.positions_payload() if adapter.connected else [],
+                    "deals": adapter.deals_payload() if adapter.connected else [],
+                    "errors": list(worker.errors),
+                    "deployment_state": state,
+                }
+                requests.post(
+                    f"{base_url}/api/agent/sync",
+                    json=sync_body,
+                    headers=headers,
+                    timeout=30,
+                )
+                print(
+                    f"heartbeat {hb.status_code} · mt5={adapter.connected} · "
+                    f"deployments={len(deployments)} · bars processed={len(state)}"
+                )
+            except requests.RequestException as exc:
+                print(f"poll error: {exc}")
+            time.sleep(POLL_SECONDS)
+    finally:
+        adapter.shutdown()

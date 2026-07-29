@@ -4,6 +4,7 @@ from apps.trading.views import (
     DeploymentCreateView,
     DeploymentListView,
     DeploymentPauseView,
+    DeploymentRearmView,
     DeploymentReviewView,
     DeploymentStopView,
 )
@@ -15,5 +16,6 @@ urlpatterns = [
     path("deploy/", DeploymentCreateView.as_view(), name="deploy"),
     path("<int:pk>/review/", DeploymentReviewView.as_view(), name="review"),
     path("<int:pk>/pause/", DeploymentPauseView.as_view(), name="pause"),
+    path("<int:pk>/rearm/", DeploymentRearmView.as_view(), name="rearm"),
     path("<int:pk>/stop/", DeploymentStopView.as_view(), name="stop"),
 ]
