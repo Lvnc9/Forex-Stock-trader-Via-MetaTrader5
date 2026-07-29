@@ -54,7 +54,7 @@ Open http://127.0.0.1:8000/ → redirects to login → dashboard after sign-in.
 
 ## Last commit
 
-- Run: `git -C tradeBot log -1 --oneline` (see milestone messages below after push)
+- `2652b47` — Phase 1a: Django scaffold, auth, and Tailwind+HTMX shell
 
 ## Next session (Phase 1b)
 
