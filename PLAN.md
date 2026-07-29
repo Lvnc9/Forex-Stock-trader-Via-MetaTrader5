@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: strategy-ui
     content: Strategy list, per-strategy parameter forms, custom Python upload/validation, deploy review step
-    status: pending
+    status: in_progress
   - id: mt5-broker
     content: TradingAgent model, agent API endpoints, token auth, Broker UI online status
     status: pending

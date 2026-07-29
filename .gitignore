@@ -31,7 +31,9 @@ download/
 node_modules/
 dist/
 
-# OS / IDE
+# User-uploaded strategy modules (generated at runtime)
+apps/strategies/user/custom_*.py
+
 .DS_Store
 .idea/
 *.swp

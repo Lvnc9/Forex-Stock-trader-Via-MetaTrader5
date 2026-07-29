@@ -10,6 +10,7 @@ class Strategy(models.Model):
     parameters = models.JSONField(default=dict, blank=True)
     is_library = models.BooleanField(default=True)
     slug = models.SlugField(max_length=80, unique=True, blank=True)
+    source_code = models.TextField(blank=True, help_text="Original source for custom strategies (optional audit).")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

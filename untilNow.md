@@ -2,6 +2,38 @@
 
 Handoff file for the **next agent chat**. Update at the end of every session.
 
+## GitHub repository
+
+| | |
+| --- | --- |
+| **Display name** | Forex-Stock trader Via MetaTrader5 |
+| **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
+| **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
+| **Default branch** | `main` |
+
+**Clone (new machine):**
+
+```bash
+git clone https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git
+cd Forex-Stock-trader-Via-MetaTrader5
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python manage.py migrate && python manage.py seed_library_strategies
+```
+
+**Push updates** (from local `tradeBot/` repo root):
+
+```bash
+git add -A && git status
+git commit -m "your message"
+git push origin main
+```
+
+**Not in git:** `venv/`, `.env`, `db.sqlite3`, `data/**/*.csv`, `apps/strategies/user/custom_*.py` (runtime uploads).
+
+**Optional:** In GitHub → **Settings → General**, set repository name/description to match the display title; enable Issues/Discussions if you want public feedback.
+
 ## Plan reference
 
 - Full spec: [PLAN.md](./PLAN.md)
@@ -10,33 +42,25 @@ Handoff file for the **next agent chat**. Update at the end of every session.
 
 | Area | Status |
 | ---- | ------ |
-| Phase 1a (scaffold + auth + UI shell) | **Done** |
-| Phase 1b (strategies + marketdata) | **Done** |
-| Phase 1c (backtest + results UI) | **Done** |
-| Phase 2+ (strategy UX, MT5, …) | Not started |
+| Phase 1 (foundation + backtest) | **Done** |
+| Phase 2 (strategy UX) | **In progress** — params, custom upload, compare runs |
+| Phase 3 (MT5 agent + Broker UI) | Not started |
 
-## Phase 1 checklist (PLAN)
+## Phase 2 checklist (this session)
 
 | Item | Status |
 | ---- | ------ |
-| Django + auth + shell | ✓ |
-| BaseStrategy, indicators, library strategies | ✓ |
-| Market data catalog + M1 loader | ✓ |
-| BacktestRunner + BacktestRun + results UI | ✓ |
-
-## Completed this session (Phase 1c)
-
-- **`BacktestRun`** model (strategy FK, slug, TF, dates, spread/commission, metrics JSON, equity curve, trades)
-- **`BacktestRunner`**: bar loop with SL/TP; intrabar rule **`stop_loss_before_take_profit`**
-- **`execute_backtest`** / **`enqueue_backtest`** (sync; Celery stub in `tasks.py`)
-- **UI**: `/backtest/` list, `/backtest/new/` form, detail with **win rate %**, PF, drawdown, **Chart.js** equity curve
-- Dashboard shows last completed backtest win rate
-- Tests: `apps/backtest/tests/test_runner.py`
+| GitHub repo created + `main` pushed | ✓ |
+| Per-strategy parameter forms (`/strategies/<id>/parameters/`) | ✓ |
+| Library “Configure parameters” + duplicate | ✓ |
+| Custom Python upload + AST/import/dry-run validation | ✓ |
+| Backtest compare (2–4 completed runs) | ✓ |
+| Deploy review step (Phase 2 remainder) | ○ |
 
 ## How to run
 
 ```bash
-cd tradeBot
+cd tradeBot   # or cloned repo folder
 source venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
@@ -44,21 +68,15 @@ python manage.py seed_library_strategies
 python manage.py runserver
 ```
 
-- http://127.0.0.1:8000/backtest/new/ — pick strategy, `data/` slug, date range, timeframe
-- Large date ranges on M1 can take time (sync run); Celery optional later
-
 ## Last commit
 
-- `0bc54d9` — Phase 1c: backtest runner, BacktestRun model, and results UI
+- (update after push)
 
-## Next session (Phase 2 or Phase 3 slice)
+## Next session
 
-New chat with `@PLAN.md`, `@untilNow.md`.
-
-Suggested: **Phase 2** — per-strategy parameter forms, backtest history polish, custom Python upload validation — **or** jump to **Phase 3** MT5 agent API + Broker UI per PLAN.
+**Phase 2 finish or Phase 3:** deploy review UI, backtest polish — **or** `TradingAgent` model, agent API, Broker page (PLAN Phase 3). Attach `@PLAN.md`, `@untilNow.md`.
 
 ## Decisions / notes
 
-- Position sizing: deploy full cash notional per entry (`units = cash / entry_price`); compounding simplified.
-- Library strategies do not set SL/TP on signals yet; intrabar rule applies when signals include `stop_loss` / `take_profit`.
-- Backtests run synchronously on form submit (no Redis required for Phase 1).
+- Custom strategies saved under `apps/strategies/user/custom_*.py` (gitignored).
+- Compare view only includes runs with `status=completed`.

@@ -3,10 +3,11 @@
 {% block header %}Strategies{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <p class="text-sm text-zinc-400">
-    Library strategies share the same Python modules for backtest and live execution (Phase 1b). Parameter forms and backtests arrive in later phases.
-  </p>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  <p class="text-sm text-zinc-400">Configure parameters, duplicate variants, or upload custom Python (<code class="text-zinc-300">BaseStrategy</code>).</p>
+  <a href="{% url 'strategies:custom_create' %}" class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
+    Upload custom strategy
+  </a>
 </div>
 
 <section class="mb-10">
@@ -16,40 +17,41 @@
       <article class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
         <h3 class="font-semibold text-white">{{ cls.name }}</h3>
         <p class="mt-2 text-sm text-zinc-400">{{ cls.description }}</p>
-        <dl class="mt-4 space-y-1 text-xs text-zinc-500">
-          <div class="flex justify-between gap-2">
-            <dt>Slug</dt>
-            <dd class="font-mono text-zinc-400">{{ cls.slug }}</dd>
-          </div>
-          <div class="flex justify-between gap-2">
-            <dt>Module</dt>
-            <dd class="truncate font-mono text-zinc-400" title="{{ cls.module_path }}">{{ cls.module_path }}</dd>
-          </div>
-        </dl>
-        <p class="mt-4 text-xs text-zinc-600">Defaults: {{ cls.default_parameters }}</p>
+        <form method="post" action="{% url 'strategies:library_configure' cls.slug %}" class="mt-4">
+          {% csrf_token %}
+          <button type="submit" class="text-sm font-medium text-sky-400 hover:text-sky-300">Configure parameters →</button>
+        </form>
       </article>
     {% endfor %}
   </div>
 </section>
 
 <section>
-  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Saved in database</h2>
+  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Saved strategies</h2>
   {% if strategies %}
     <div class="overflow-hidden rounded-xl border border-zinc-800">
       <table class="min-w-full divide-y divide-zinc-800 text-sm">
         <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
           <tr>
             <th class="px-4 py-3 font-medium">Name</th>
-            <th class="px-4 py-3 font-medium">Module</th>
+            <th class="px-4 py-3 font-medium">Type</th>
             <th class="px-4 py-3 font-medium">Parameters</th>
+            <th class="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-zinc-800 bg-zinc-950/40">
           {% for s in strategies %}
             <tr>
               <td class="px-4 py-3 font-medium text-white">{{ s.name }}</td>
-              <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ s.module_path }}</td>
+              <td class="px-4 py-3 text-xs text-zinc-500">{% if s.is_library %}Library{% else %}Custom{% endif %}</td>
               <td class="px-4 py-3 font-mono text-xs text-zinc-500">{{ s.parameters }}</td>
+              <td class="px-4 py-3 text-right">
+                <a href="{% url 'strategies:parameters' s.pk %}" class="text-sky-400 hover:text-sky-300">Edit</a>
+                <form method="post" action="{% url 'strategies:duplicate' s.pk %}" class="inline ml-3">
+                  {% csrf_token %}
+                  <button type="submit" class="text-zinc-500 hover:text-zinc-300">Duplicate</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -57,7 +59,7 @@
     </div>
   {% else %}
     <p class="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 px-4 py-8 text-center text-sm text-zinc-500">
-      No rows yet. Run <code class="text-zinc-400">python manage.py seed_library_strategies</code>.
+      Run <code class="text-zinc-400">python manage.py seed_library_strategies</code> or configure a library card above.
     </p>
   {% endif %}
 </section>
