@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% block page_title %}TradeBot{% endblock %} — TradeBot{% endblock %}
+
+{% block body %}
+<div x-data="{ sidebarOpen: false }" class="flex h-full min-h-screen">
+  {# Mobile overlay #}
+  <div
+    x-show="sidebarOpen"
+    x-transition.opacity
+    class="fixed inset-0 z-40 bg-black/60 lg:hidden"
+    @click="sidebarOpen = false"
+    aria-hidden="true"
+  ></div>
+
+  {# Sidebar #}
+  <aside
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-900 transition-transform duration-200 lg:static lg:translate-x-0"
+  >
+    <div class="flex h-16 shrink-0 items-center gap-2 border-b border-zinc-800 px-5">
+      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3.75M9.75 8.25h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+        </svg>
+      </span>
+      <span class="text-lg font-semibold tracking-tight text-white">TradeBot</span>
+    </div>
+
+    <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Main">
+      {% for item in nav_items %}
+        {% if item.disabled %}
+          <span
+            class="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500"
+            title="Coming in a later phase"
+          >
+            <span class="h-2 w-2 rounded-full bg-zinc-700"></span>
+            {{ item.label }}
+            <span class="ml-auto text-xs text-zinc-600">Soon</span>
+          </span>
+        {% elif item.url_name %}
+          <a
+            href="{% url item.url_name %}"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white {% if request.resolver_match.view_name == item.url_name %}bg-zinc-800 text-white{% endif %}"
+          >
+            <span class="h-2 w-2 rounded-full bg-sky-400"></span>
+            {{ item.label }}
+          </a>
+        {% else %}
+          <a href="{{ item.href }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white">
+            <span class="h-2 w-2 rounded-full bg-zinc-600"></span>
+            {{ item.label }}
+          </a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+
+    <div class="border-t border-zinc-800 p-4 text-xs text-zinc-500">
+      Phase 1a — foundation shell
+    </div>
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    {# Top bar #}
+    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b border-zinc-800 bg-zinc-950/90 px-4 backdrop-blur sm:px-6">
+      <button
+        type="button"
+        class="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white lg:hidden"
+        @click="sidebarOpen = true"
+        aria-label="Open menu"
+      >
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+      </button>
+
+      <div class="flex flex-1 items-center justify-between gap-4">
+        <h1 class="truncate text-lg font-semibold text-white">{% block header %}Dashboard{% endblock %}</h1>
+
+        <div class="flex items-center gap-3">
+          <span class="hidden items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-400 sm:inline-flex">
+            <span class="h-1.5 w-1.5 rounded-full bg-zinc-500"></span>
+            MT5 offline
+          </span>
+          <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
+            Demo
+          </span>
+
+          {% if user.is_authenticated %}
+          <div class="flex items-center gap-2 border-l border-zinc-800 pl-3">
+            <span class="hidden text-sm text-zinc-400 sm:inline">{{ user.get_username }}</span>
+            <form method="post" action="{% url 'core:logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white">
+                Log out
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for message in messages %}
+            <div class="rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

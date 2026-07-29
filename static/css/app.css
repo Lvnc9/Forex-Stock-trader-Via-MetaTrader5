@@ -1,0 +1,9 @@
+/* TradeBot — small additions on top of Tailwind CDN (Phase 1a) */
+
+html {
+  scroll-behavior: smooth;
+}
+
+code {
+  font-size: 0.875em;
+}

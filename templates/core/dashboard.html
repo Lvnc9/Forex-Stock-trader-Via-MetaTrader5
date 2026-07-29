@@ -1,0 +1,55 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid gap-6 lg:grid-cols-3">
+  <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 lg:col-span-2">
+    <h2 class="text-base font-semibold text-white">Welcome back</h2>
+    <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+      TradeBot foundation is running. Next up: Python strategies, local M1 backtests, and MT5 demo deployment per
+      <span class="text-zinc-300">PLAN.md</span>.
+    </p>
+    <dl class="mt-6 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+        <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Active deployments</dt>
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-white">—</dd>
+      </div>
+      <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+        <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Last backtest win rate</dt>
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-emerald-400">—</dd>
+      </div>
+      <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+        <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">Local datasets</dt>
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-sky-400">—</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+    <h2 class="text-base font-semibold text-white">Phase 1a checklist</h2>
+    <ul class="mt-4 space-y-3 text-sm text-zinc-400">
+      <li class="flex items-start gap-2">
+        <span class="mt-0.5 text-emerald-400">✓</span>
+        Django project + app layout
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="mt-0.5 text-emerald-400">✓</span>
+        Login / session auth
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="mt-0.5 text-emerald-400">✓</span>
+        Tailwind + HTMX shell
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="mt-0.5 text-zinc-600">○</span>
+        Strategies &amp; market data (1b)
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="mt-0.5 text-zinc-600">○</span>
+        Backtest runner (1c)
+      </li>
+    </ul>
+  </section>
+</div>
+{% endblock %}
