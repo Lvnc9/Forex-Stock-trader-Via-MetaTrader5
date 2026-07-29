@@ -11,73 +11,62 @@ Handoff file for the **next agent chat**. Update at the end of every session.
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
 | **Default branch** | `main` |
 
-**Clone (new machine):**
-
-```bash
-git clone https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git
-cd Forex-Stock-trader-Via-MetaTrader5
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python manage.py migrate && python manage.py seed_library_strategies
-```
-
-**Push updates** (from local `tradeBot/` repo root):
-
-```bash
-git add -A && git status
-git commit -m "your message"
-git push origin main
-```
-
-**Not in git:** `venv/`, `.env`, `db.sqlite3`, `data/**/*.csv`, `apps/strategies/user/custom_*.py` (runtime uploads).
-
-**Optional:** In GitHub → **Settings → General**, set repository name/description to match the display title; enable Issues/Discussions if you want public feedback.
-
 ## Plan reference
 
-- Full spec: [PLAN.md](./PLAN.md)
+- [PLAN.md](./PLAN.md)
 
 ## Current state (last updated: 2026-07-29)
 
 | Area | Status |
 | ---- | ------ |
-| Phase 1 (foundation + backtest) | **Done** |
-| Phase 2 (strategy UX) | **In progress** — params, custom upload, compare runs |
-| Phase 3 (MT5 agent + Broker UI) | Not started |
+| Phase 1 (backtest foundation) | **Done** |
+| Phase 2 (strategy UX + deploy review) | **Done** |
+| Phase 3 (MT5 agent + broker) | **In progress** — API + Broker UI + stub agent; live worker TBD |
 
-## Phase 2 checklist (this session)
+## Completed this session
 
-| Item | Status |
-| ---- | ------ |
-| GitHub repo created + `main` pushed | ✓ |
-| Per-strategy parameter forms (`/strategies/<id>/parameters/`) | ✓ |
-| Library “Configure parameters” + duplicate | ✓ |
-| Custom Python upload + AST/import/dry-run validation | ✓ |
-| Backtest compare (2–4 completed runs) | ✓ |
-| Deploy review step (Phase 2 remainder) | ○ |
+- **Deploy review:** `/live/deploy/` → `/live/<id>/review/` (params, last backtest link, live-account confirm)
+- **Broker:** `TradingAgent` + token (hashed), `/broker/` UI, one-time token display
+- **Agent API:** `POST /api/agent/heartbeat`, `POST /api/agent/sync`, `GET /api/agent/deployments` (Bearer token)
+- **Live trading:** `Deployment` model (draft/armed/paused/stopped), list + pause/stop
+- **Navbar:** MT5 connected + Demo/Live from agent heartbeat
+- **Windows stub:** `agent/` poll client (`python -m agent` from repo root + `agent.env`)
 
 ## How to run
 
 ```bash
-cd tradeBot   # or cloned repo folder
-source venv/bin/activate
-pip install -r requirements.txt
+cd tradeBot && source venv/bin/activate
 python manage.py migrate
-python manage.py seed_library_strategies
 python manage.py runserver
 ```
 
+**Try agent stub (second terminal):**
+
+```bash
+# agent.env: WEBAPP_URL=http://127.0.0.1:8000  AGENT_TOKEN=<from /broker/>
+pip install -r agent/requirements.txt
+python -m agent
+```
+
+## URLs
+
+| Path | Purpose |
+| ---- | ------- |
+| `/broker/` | Create agents, copy token |
+| `/live/` | Deployments |
+| `/live/deploy/` | New deployment → review |
+| `/api/agent/*` | Windows agent (no session auth) |
+
 ## Last commit
 
-- `c4d8d55` — Phase 2: strategy parameters, custom upload, backtest compare
-- Remote: pushed to `origin/main` after this session (see GitHub section)
+- (after push)
 
 ## Next session
 
-**Phase 2 finish or Phase 3:** deploy review UI, backtest polish — **or** `TradingAgent` model, agent API, Broker page (PLAN Phase 3). Attach `@PLAN.md`, `@untilNow.md`.
+- **Phase 3 continuation:** `LiveWorker` on agent (bars + `SignalEngine` + MT5 orders), deployment sync UI, positions table from agent sync payload
+- **Not in Django:** `MetaTrader5` import stays in `agent/` only
 
 ## Decisions / notes
 
-- Custom strategies saved under `apps/strategies/user/custom_*.py` (gitignored).
-- Compare view only includes runs with `status=completed`.
+- Agent tokens stored as SHA-256 hash; plain token shown once at creation.
+- Online = heartbeat within `AGENT_HEARTBEAT_TTL_SECONDS` (90s default).

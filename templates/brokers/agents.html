@@ -1,0 +1,83 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Broker · Agents{% endblock %}
+
+{% block content %}
+<div class="grid gap-8 lg:grid-cols-2">
+  <section>
+    <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Register agent</h2>
+    <form method="post" action="{% url 'brokers:create' %}" class="flex flex-wrap gap-3">
+      {% csrf_token %}
+      {{ create_form.name }}
+      <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">Create agent</button>
+    </form>
+    <p class="mt-3 text-xs text-zinc-500">Copy the token into <code class="text-zinc-400">agent.env</code> on the Windows machine (see <code class="text-zinc-400">agent/README.md</code>).</p>
+
+    {% if new_token %}
+      <div class="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+        <p class="text-sm font-medium text-amber-200">Token for {{ new_agent_name }} (shown once)</p>
+        <code class="mt-2 block break-all rounded bg-zinc-950 p-3 text-xs text-zinc-200">{{ new_token }}</code>
+      </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Symbol map</h2>
+    <p class="mb-2 text-sm text-zinc-400">Map catalog slugs → MT5 symbols in <a href="/admin/marketdata/symbolmap/" class="text-sky-400">Django admin</a>.</p>
+    <ul class="text-sm text-zinc-500">
+      {% for m in symbol_maps %}
+        <li class="font-mono text-xs text-zinc-400">{{ m.catalog_slug }} → {{ m.mt5_symbol|default:"?" }}</li>
+      {% empty %}
+        <li>No mappings yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="mt-10">
+  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Agents</h2>
+  {% if agents %}
+    <div class="overflow-hidden rounded-xl border border-zinc-800">
+      <table class="min-w-full divide-y divide-zinc-800 text-sm">
+        <thead class="bg-zinc-900/80 text-left text-xs uppercase text-zinc-500">
+          <tr>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">MT5</th>
+            <th class="px-4 py-3">Account</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-800">
+          {% for a in agents %}
+            <tr>
+              <td class="px-4 py-3 font-medium text-white">{{ a.name }}</td>
+              <td class="px-4 py-3">
+                {% if a.is_online %}
+                  <span class="text-emerald-400">Online</span>
+                {% else %}
+                  <span class="text-zinc-500">Offline</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">{% if a.mt5_connected %}Connected{% else %}—{% endif %}</td>
+              <td class="px-4 py-3 text-xs text-zinc-400">
+                {% if a.account_snapshot.login %}
+                  {{ a.account_snapshot.trade_mode|default:"?" }} · {{ a.account_snapshot.balance }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="px-4 py-3 text-right">
+                <form method="post" action="{% url 'brokers:delete' a.pk %}" onsubmit="return confirm('Delete agent?');">
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs text-rose-400">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-sm text-zinc-500">No agents yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

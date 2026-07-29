@@ -58,6 +58,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.nav",
+                "apps.core.context_processors.broker_status",
             ],
         },
     },
@@ -86,6 +87,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 TRADEBOT_DATA_ROOT = BASE_DIR / "data"
+AGENT_HEARTBEAT_TTL_SECONDS = 90
 
 LOGIN_URL = "core:login"
 LOGIN_REDIRECT_URL = "core:dashboard"

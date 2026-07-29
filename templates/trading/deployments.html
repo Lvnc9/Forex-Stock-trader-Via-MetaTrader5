@@ -1,0 +1,49 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Live trading{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between gap-4">
+  <p class="text-sm text-zinc-400">Armed deployments are pulled by the Windows agent over HTTPS.</p>
+  <a href="{% url 'trading:deploy' %}" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">New deployment</a>
+</div>
+
+{% if deployments %}
+  <div class="overflow-hidden rounded-xl border border-zinc-800">
+    <table class="min-w-full divide-y divide-zinc-800 text-sm">
+      <thead class="bg-zinc-900/80 text-left text-xs uppercase text-zinc-500">
+        <tr>
+          <th class="px-4 py-3">Strategy</th>
+          <th class="px-4 py-3">Agent</th>
+          <th class="px-4 py-3">Symbol</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-800">
+        {% for d in deployments %}
+          <tr>
+            <td class="px-4 py-3 text-white">{{ d.strategy.name }}</td>
+            <td class="px-4 py-3 text-zinc-400">{{ d.agent.name }}</td>
+            <td class="px-4 py-3 font-mono text-xs">{{ d.mt5_symbol }} · {{ d.timeframe }}</td>
+            <td class="px-4 py-3 capitalize">{{ d.status }}</td>
+            <td class="px-4 py-3 text-right space-x-2">
+              {% if d.status == "draft" %}
+                <a href="{% url 'trading:review' d.pk %}" class="text-sky-400">Review →</a>
+              {% endif %}
+              {% if d.status == "armed" %}
+                <form method="post" action="{% url 'trading:pause' d.pk %}" class="inline">{% csrf_token %}<button class="text-zinc-400">Pause</button></form>
+              {% endif %}
+              {% if d.status != "stopped" %}
+                <form method="post" action="{% url 'trading:stop' d.pk %}" class="inline">{% csrf_token %}<button class="text-rose-400">Stop</button></form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-sm text-zinc-500">No deployments. <a href="{% url 'trading:deploy' %}" class="text-sky-400">Create one</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Deploy review{% endblock %}
+
+{% block content %}
+<section class="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+  <h2 class="text-lg font-semibold text-white">{{ deployment.strategy.name }}</h2>
+  <dl class="mt-4 grid gap-2 text-sm text-zinc-400 sm:grid-cols-2">
+    <div><dt class="text-zinc-500">Agent</dt><dd class="text-zinc-200">{{ deployment.agent.name }}</dd></div>
+    <div><dt class="text-zinc-500">Catalog slug</dt><dd class="font-mono">{{ deployment.catalog_slug }}</dd></div>
+    <div><dt class="text-zinc-500">MT5 symbol</dt><dd class="font-mono">{{ deployment.mt5_symbol }}</dd></div>
+    <div><dt class="text-zinc-500">Timeframe · lot</dt><dd>{{ deployment.timeframe }} · {{ deployment.lot_size }}</dd></div>
+    <div class="sm:col-span-2"><dt class="text-zinc-500">Parameters</dt><dd class="font-mono text-xs">{{ deployment.parameters }}</dd></div>
+    <div class="sm:col-span-2"><dt class="text-zinc-500">Module</dt><dd class="font-mono text-xs">{{ deployment.strategy.module_path }}</dd></div>
+  </dl>
+</section>
+
+<section class="mb-8 rounded-xl border border-zinc-800 p-6">
+  <h3 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Last backtest (same strategy + slug)</h3>
+  {% if last_backtest %}
+    <p class="mt-2 text-sm text-zinc-300">
+      Win rate <span class="text-emerald-400">{{ last_backtest.metrics.win_rate_pct }}%</span>
+      · Return {{ last_backtest.metrics.net_return_pct }}%
+      · <a href="{% url 'backtest:detail' last_backtest.pk %}" class="text-sky-400">Run #{{ last_backtest.pk }}</a>
+    </p>
+  {% else %}
+    <p class="mt-2 text-sm text-zinc-500">No completed backtest found. Consider running one in <a href="{% url 'backtest:create' %}" class="text-sky-400">Backtest</a> first.</p>
+  {% endif %}
+</section>
+
+<form method="post" class="mx-auto max-w-lg space-y-4">
+  {% csrf_token %}
+  {% if requires_live %}
+    <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      Agent reports a <strong>live</strong> MT5 account. Extra confirmation required.
+    </div>
+  {% endif %}
+  {% for field in form %}
+    <label class="flex items-start gap-2 text-sm text-zinc-300">
+      {{ field }}
+      <span>{{ field.label }}</span>
+    </label>
+    {% for e in field.errors %}<p class="text-xs text-rose-400">{{ e }}</p>{% endfor %}
+  {% endfor %}
+  <button type="submit" class="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-emerald-400">
+    Arm deployment
+  </button>
+</form>
+{% endblock %}

@@ -79,13 +79,15 @@
         <h1 class="truncate text-lg font-semibold text-white">{% block header %}Dashboard{% endblock %}</h1>
 
         <div class="flex items-center gap-3">
-          <span class="hidden items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-400 sm:inline-flex">
-            <span class="h-1.5 w-1.5 rounded-full bg-zinc-500"></span>
-            MT5 offline
+          <span class="hidden items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium sm:inline-flex {% if broker_mt5_connected %}text-emerald-400{% else %}text-zinc-400{% endif %}">
+            <span class="h-1.5 w-1.5 rounded-full {% if broker_mt5_connected %}bg-emerald-400{% else %}bg-zinc-500{% endif %}"></span>
+            MT5 {% if broker_mt5_connected %}connected{% else %}offline{% endif %}
           </span>
-          <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
-            Demo
-          </span>
+          {% if broker_live_mode %}
+          <span class="rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300">Live</span>
+          {% else %}
+          <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">Demo</span>
+          {% endif %}
 
           {% if user.is_authenticated %}
           <div class="flex items-center gap-2 border-l border-zinc-800 pl-3">
