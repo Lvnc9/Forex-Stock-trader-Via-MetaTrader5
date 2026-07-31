@@ -58,7 +58,7 @@ python manage.py runserver
 
 ## Last commit
 
-- Phase A/B rules engine + builder (on top of Phase C)
+- `5e063e2` — Phases A/B: rules engine and fixed-slot rule builder UI
 
 ## Recommended next work
 
