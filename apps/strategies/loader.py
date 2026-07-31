@@ -9,9 +9,9 @@ from apps.strategies.base import BaseStrategy
 
 
 def load_strategy_class(module_path: str) -> Type[BaseStrategy]:
-    allowed = ("apps.strategies.library.", "apps.strategies.user.")
+    allowed = ("apps.strategies.library.", "apps.strategies.user.", "apps.strategies.rules.")
     if not module_path.startswith(allowed):
-        raise ValidationError(f"Module path must live under apps.strategies library or user: {module_path}")
+        raise ValidationError(f"Module path must live under apps.strategies library, user, or rules: {module_path}")
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:

@@ -18,7 +18,7 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
     run.save(update_fields=["status", "error_message"])
 
     try:
-        strategy = instantiate_strategy(run.strategy.module_path, run.strategy.parameters)
+        strategy = instantiate_strategy(run.strategy.module_path, run.strategy.runtime_parameters())
         start_dt = timezone.make_aware(datetime.combine(run.start, time.min))
         end_dt = timezone.make_aware(datetime.combine(run.end, time.max))
         m1 = load_m1_bars(

@@ -4,14 +4,19 @@
 
 {% block content %}
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-  <p class="text-sm text-zinc-400">Configure parameters, duplicate variants, or upload custom Python (<code class="text-zinc-300">BaseStrategy</code>).</p>
-  <a href="{% url 'strategies:custom_create' %}" class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
-    Upload custom strategy
-  </a>
+  <p class="text-sm text-zinc-400">Library Python, rule-builder strategies, or custom Python (<code class="text-zinc-300">BaseStrategy</code>).</p>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'strategies:rule_create' %}" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
+      New rule strategy
+    </a>
+    <a href="{% url 'strategies:custom_create' %}" class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
+      Upload custom strategy
+    </a>
+  </div>
 </div>
 
 <section class="mb-10">
-  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Library</h2>
+  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Library (Python)</h2>
   <div class="grid gap-4 lg:grid-cols-3">
     {% for cls in library_classes %}
       <article class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
@@ -21,6 +26,21 @@
           {% csrf_token %}
           <button type="submit" class="text-sm font-medium text-sky-400 hover:text-sky-300">Configure parameters →</button>
         </form>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-10">
+  <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">Rule templates</h2>
+  <div class="grid gap-4 lg:grid-cols-3">
+    {% for t in rule_templates %}
+      <article class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+        <h3 class="font-semibold text-white">{{ t.name }}</h3>
+        <p class="mt-2 text-sm text-zinc-400">{{ t.description }}</p>
+        <a href="{% url 'strategies:rule_create' %}?from={{ t.slug }}" class="mt-4 inline-block text-sm font-medium text-sky-400 hover:text-sky-300">
+          Customize rules →
+        </a>
       </article>
     {% endfor %}
   </div>
@@ -43,14 +63,29 @@
           {% for s in strategies %}
             <tr>
               <td class="px-4 py-3 font-medium text-white">{{ s.name }}</td>
-              <td class="px-4 py-3 text-xs text-zinc-500">{% if s.is_library %}Library{% else %}Custom{% endif %}</td>
+              <td class="px-4 py-3 text-xs">
+                {% if s.is_rule_strategy %}
+                  <span class="rounded bg-violet-500/15 px-2 py-0.5 text-violet-300">Rules</span>
+                {% elif s.is_custom_python %}
+                  <span class="rounded bg-amber-500/15 px-2 py-0.5 text-amber-300">Python</span>
+                {% else %}
+                  <span class="rounded bg-zinc-700/50 px-2 py-0.5 text-zinc-400">Library</span>
+                {% endif %}
+              </td>
               <td class="px-4 py-3 font-mono text-xs text-zinc-500">{{ s.parameters }}</td>
-              <td class="px-4 py-3 text-right">
-                <a href="{% url 'strategies:parameters' s.pk %}" class="text-sky-400 hover:text-sky-300">Edit</a>
-                <form method="post" action="{% url 'strategies:duplicate' s.pk %}" class="inline ml-3">
+              <td class="px-4 py-3 text-right space-x-3">
+                {% if s.is_rule_strategy %}
+                  <a href="{% url 'strategies:rule_edit' s.pk %}" class="text-sky-400 hover:text-sky-300">Edit</a>
+                {% elif s.is_custom_python %}
+                  <a href="{% url 'strategies:custom_edit' s.pk %}" class="text-sky-400 hover:text-sky-300">Edit</a>
+                {% else %}
+                  <a href="{% url 'strategies:parameters' s.pk %}" class="text-sky-400 hover:text-sky-300">Edit</a>
+                {% endif %}
+                <form method="post" action="{% url 'strategies:duplicate' s.pk %}" class="inline">
                   {% csrf_token %}
                   <button type="submit" class="text-zinc-500 hover:text-zinc-300">Duplicate</button>
                 </form>
+                <a href="{% url 'strategies:delete' s.pk %}" class="text-rose-400/80 hover:text-rose-300">Delete</a>
               </td>
             </tr>
           {% endfor %}
@@ -59,7 +94,7 @@
     </div>
   {% else %}
     <p class="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 px-4 py-8 text-center text-sm text-zinc-500">
-      Run <code class="text-zinc-400">python manage.py seed_library_strategies</code> or configure a library card above.
+      Create a rule strategy, upload custom Python, or configure a library card above.
     </p>
   {% endif %}
 </section>

@@ -1,6 +1,6 @@
 {% extends "layouts/app_shell.html" %}
 
-{% block header %}Custom strategy{% endblock %}
+{% block header %}{% if editing %}Edit custom strategy{% else %}Custom strategy{% endif %}{% endblock %}
 
 {% block content %}
 <form method="post" class="mx-auto max-w-3xl space-y-5">

@@ -93,7 +93,7 @@ def deployments(request):
             {
                 "id": dep.id,
                 "module_path": dep.strategy.module_path,
-                "parameters": dep.parameters or dep.strategy.parameters,
+                "parameters": dep.parameters or dep.strategy.runtime_parameters(),
                 "catalog_slug": dep.catalog_slug,
                 "mt5_symbol": dep.mt5_symbol,
                 "timeframe": dep.timeframe,

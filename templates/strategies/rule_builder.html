@@ -1,0 +1,124 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}{% if strategy %}Edit rule strategy{% else %}New rule strategy{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-5xl space-y-10">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {% if template_meta %}
+    <p class="text-sm text-zinc-400">Customizing template <span class="text-zinc-200">{{ template_meta.name }}</span> — logic is editable, not just knobs.</p>
+  {% endif %}
+
+  <section class="space-y-4">
+    <div>
+      <label class="tb-label" for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% for e in form.name.errors %}<p class="mt-1 text-xs text-rose-400">{{ e }}</p>{% endfor %}
+    </div>
+    <div>
+      <label class="tb-label" for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Parameters (up to 4)</h2>
+    <div class="space-y-3">
+      {% for row in param_rows %}
+        <div class="grid gap-2 sm:grid-cols-5">
+          <div><label class="tb-label">Name</label>{{ row.name }}</div>
+          <div><label class="tb-label">Type</label>{{ row.type }}</div>
+          <div><label class="tb-label">Default</label>{{ row.default }}</div>
+          <div><label class="tb-label">Min</label>{{ row.min }}</div>
+          <div><label class="tb-label">Max</label>{{ row.max }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Indicators (up to 6)</h2>
+    <div class="space-y-3">
+      {% for row in ind_rows %}
+        <div class="grid gap-2 sm:grid-cols-5">
+          <div><label class="tb-label">Id</label>{{ row.id }}</div>
+          <div><label class="tb-label">Fn</label>{{ row.fn }}</div>
+          <div><label class="tb-label">Period</label>{{ row.period }}</div>
+          <div><label class="tb-label">Period param</label>{{ row.period_param }}</div>
+          <div><label class="tb-label">Column</label>{{ row.column }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% for group in group_rows %}
+    <section>
+      <div class="mb-3 flex items-end justify-between gap-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ group.label }}</h2>
+        <div class="w-32"><label class="tb-label">Logic</label>{{ group.logic }}</div>
+      </div>
+      <div class="space-y-4">
+        {% for rule in group.rules %}
+          <div class="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+            <div class="mb-3 w-40"><label class="tb-label">Op</label>{{ rule.op }}</div>
+            <div class="grid gap-4 lg:grid-cols-2">
+              <div>
+                <p class="mb-2 text-xs uppercase text-zinc-500">Left</p>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <div><label class="tb-label">Ref</label>{{ rule.left_ref }}</div>
+                  <div><label class="tb-label">Indicator id</label>{{ rule.left_indicator }}</div>
+                  <div><label class="tb-label">Price</label>{{ rule.left_price }}</div>
+                  <div><label class="tb-label">Value</label>{{ rule.left_value }}</div>
+                  <div><label class="tb-label">Param</label>{{ rule.left_param }}</div>
+                </div>
+              </div>
+              <div>
+                <p class="mb-2 text-xs uppercase text-zinc-500">Right</p>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <div><label class="tb-label">Ref</label>{{ rule.right_ref }}</div>
+                  <div><label class="tb-label">Indicator id</label>{{ rule.right_indicator }}</div>
+                  <div><label class="tb-label">Price</label>{{ rule.right_price }}</div>
+                  <div><label class="tb-label">Value</label>{{ rule.right_value }}</div>
+                  <div><label class="tb-label">Param</label>{{ rule.right_param }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+
+  <section class="grid gap-6 sm:grid-cols-2">
+    <div class="space-y-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Stop loss</h2>
+      <div><label class="tb-label">Type</label>{{ form.stop_type }}</div>
+      <div><label class="tb-label">Percent</label>{{ form.stop_pct }}</div>
+      <div><label class="tb-label">ATR mult</label>{{ form.stop_atr_mult }}</div>
+      <div><label class="tb-label">ATR period</label>{{ form.stop_atr_period }}</div>
+    </div>
+    <div class="space-y-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Take profit</h2>
+      <div><label class="tb-label">Type</label>{{ form.tp_type }}</div>
+      <div><label class="tb-label">Percent</label>{{ form.tp_pct }}</div>
+      <div><label class="tb-label">R:R</label>{{ form.tp_rr }}</div>
+    </div>
+  </section>
+
+  <p class="text-xs text-zinc-600">Dry-run validation runs against synthetic bars before save. Builder refs: indicator / price / value / param (pct_offset &amp; arith still work in templates / JSON).</p>
+
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
+      {% if strategy %}Save rule strategy{% else %}Create rule strategy{% endif %}
+    </button>
+    <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800">Cancel</a>
+  </div>
+</form>
+{% endblock %}

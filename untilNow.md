@@ -8,7 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branch** | `cursor/htf-bars-engine-unification-48fe` (Phase C) → merge to `main` |
+| **Branches** | `cursor/htf-bars-engine-unification-48fe` (Phase C PR #1) · `cursor/rules-engine-builder-ab-48fe` (A/B on top of C) |
 
 ## Plan & workflow
 
@@ -26,21 +26,26 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | 3 — MT5 agent + live (v1) | **Done** |
 | 4 — Data & stocks breadth | **Done** |
 | Post–Phase 3 polish slices 0–7 | **Done** |
-| **C — HTF bars + engine unification** | **Done (this branch)** |
-| A/B — Rules engine + builder UI | **Not in repo** (prior chat verified locally but never committed) |
+| **C — HTF bars + engine unification** | **Done** (intact; PR #1) |
+| **A — Rules engine** | **Done** (this branch; was never on remote before) |
+| **B — Rule builder UI** | **Done** (this branch) |
 
-## Phase C (this session)
+## Integrity check (this session)
+
+- Phase C files match `origin/cursor/htf-bars-engine-unification-48fe` — **not damaged**.
+- Prior “Phase A/B committed” claim: **false on GitHub** (only `main` + Phase C branch existed). A/B is now landed on `cursor/rules-engine-builder-ab-48fe`.
+
+## Phase A/B (this session)
 
 | Item | What |
 | ---- | ---- |
-| SignalEngine | Shared `build_context` + `on_latest_bar`; HTF window via `htf_bars.loc[:ts]` |
-| BacktestRunner | Uses `SignalEngine.run` for signals (no duplicate on_bar loop); accepts `htf_bars` |
-| Loader | `prepare_primary_and_htf` + `apps/marketdata/timeframes.py` helpers |
-| Models | Optional `htf_timeframe` on `BacktestRun` and `Deployment` (+ migrations) |
-| UI / API | Backtest + deploy forms; agent deployments JSON includes `htf_timeframe` |
-| LiveWorker | Fetches HTF rates when set; evaluates via `SignalEngine.on_latest_bar` |
-| Context | `BarContext.htf_indicators` helper |
-| Tests | `apps/strategies/tests/test_phase_c_htf.py` — full suite **36/36** green |
+| Rules engine | `apps/strategies/rules/` — expr language (indicator/price/value/param/pct_offset/arith), schema, `RuleStrategy` runtime |
+| Templates | `ma_cross_rules`, `rsi_rules`, `range_breakout_rules` (pct_offset demo) |
+| Builder UI | `/strategies/rules/new/`, `/strategies/rules/<pk>/edit/`, `?from=<slug>` |
+| Dry-run | Spec validated via real SignalEngine before save |
+| Python lifecycle | `update_custom_strategy_source` edits file in place with rollback |
+| Delete | Blocked when BacktestRun/Deployment references strategy |
+| Model | `Strategy.rule_spec` + `runtime_parameters()` for backtest/live |
 
 ## Run
 
@@ -51,17 +56,13 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Async backtests (optional): set `CELERY_TASK_ALWAYS_EAGER=False` and `celery -A config worker -l info` with Redis.
-
-Agent (Windows): see [agent/README.md](./agent/README.md).
-
 ## Last commit
 
-- `33c03fe` — Phase C: HTF bars + SignalEngine/BacktestRunner unification
+- Phase A/B rules engine + builder (on top of Phase C)
 
 ## Recommended next work
 
-- Re-land **Phase A/B** (rules engine + rule builder UI) if still desired — prior work was never pushed to git.
-- Optional: library strategy that actually consumes `ctx.htf_bars` / `ctx.htf_indicators`.
-- Builder expression picker for `pct_offset` / nested arithmetic (scope limit from Phase B notes).
-- Smoke-test Windows agent with an HTF deployment (`htf_timeframe` in API payload).
+- Merge Phase C PR #1, then this A/B branch (or merge this branch alone — it includes C).
+- Optional Phase D: builder UI for `pct_offset` / nested `arith` (engine already supports them).
+- HTF-consuming library/rule template.
+- Windows agent smoke-test with HTF + rule strategy deploy.

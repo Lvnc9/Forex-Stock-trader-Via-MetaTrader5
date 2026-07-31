@@ -51,7 +51,7 @@ class DeploymentCreateView(View):
 
         deployment = form.save(commit=False)
         deployment.status = Deployment.Status.DRAFT
-        deployment.parameters = dict(deployment.strategy.parameters or {})
+        deployment.parameters = dict(deployment.strategy.runtime_parameters())
         deployment.save()
         return redirect("trading:review", pk=deployment.pk)
 
