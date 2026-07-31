@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open:** optional hardening (hedging accounts, richer SL/TP from library strategies, multi-TF library strategies that consume `ctx.htf_bars`, builder UI for `pct_offset`/arith). Phases A/B (rules engine + builder) and C (HTF + engine unify) are implemented — see [untilNow.md](untilNow.md).
+**Still open:** merge open PRs to `main`; Windows MT5 smoke for HTF rules; optional hardening (hedging accounts, library SL/TP knobs, deeper nested exprs, Parquet cache). Phases A–E implemented — see [untilNow.md](untilNow.md).
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
@@ -530,6 +530,7 @@ Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in
 | HTF + engine unify | `SignalEngine`, `BacktestRunner`, live worker | Optional HTF bars for backtest/live; shared bar loop | **done (Phase C)** |
 | Rules engine + builder | `apps/strategies/rules/` | JSON rule-spec strategies + fixed-slot builder UI | **done (Phases A/B)** |
 | Builder expr + HTF inds | `rules/builder.py`, templates | pct_offset/arith in UI; indicator `source: htf` | **done (Phase D)** |
+| HTF gate + seed templates | forms, `seed_rule_templates`, agent docs | Require HTF when needed; seed + smoke path | **done (Phase E)** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 

@@ -8,32 +8,42 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branches** | PR #1 Phase C · PR #2 Phases A/B (+C) · `cursor/phase-d-builder-expr-htf-48fe` (Phase D) |
+| **Open PRs** | #1 Phase C · #2 A/B · #3 Phase D · Phase E on `cursor/phase-e-htf-gate-seed-48fe` |
 
-## Plan & workflow
+## Done until now
 
-- Architecture: [PLAN.md](./PLAN.md)
-- Agent prompts: [docs/WORKFLOW.md](./docs/WORKFLOW.md)
-- Data downloads: [docs/DATA.md](./docs/DATA.md)
-- Conventions: [AGENTS.md](./AGENTS.md)
+| Area | Status |
+| ---- | ------ |
+| Phase 1 — scaffold, strategies, marketdata, backtest | **Done** |
+| Phase 2 — strategy UX, custom upload, deploy review | **Done** |
+| Phase 3 — MT5 agent, live worker, broker API | **Done** |
+| Phase 4 — FX/stock downloads | **Done** |
+| Polish slices 0–7 | **Done** |
+| **C** — HTF bars + SignalEngine/BacktestRunner unify | **Done** (PR #1+) |
+| **A** — Rules expression engine + RuleStrategy | **Done** (PR #2+) |
+| **B** — Rule builder UI, dry-run, delete, Python in-place edit | **Done** (PR #2+) |
+| **D** — Builder pct_offset/arith + HTF indicator source + template | **Done** (PR #3) |
+| **E** — HTF form gate, `seed_rule_templates`, LiveWorker HTF+rules smoke | **Done** (this branch) |
 
-## Phase status (2026-07-31)
-
-| Phase | Status |
-| ----- | ------ |
-| 1–4 + polish 0–7 | **Done** |
-| **C — HTF + engine unify** | **Done** (PR #1; also in #2/#3) |
-| **A/B — Rules engine + builder** | **Done** (PR #2; also in #3) |
-| **D — Builder pct_offset/arith + HTF indicators** | **Done** (this branch) |
-
-## Phase D (this session)
+## Phase E (this session)
 
 | Item | What |
 | ---- | ---- |
-| Builder refs | `pct_offset` + `arith` editable in fixed-slot form (round-trip from templates) |
-| Indicator source | `primary` \| `htf` on each indicator; RuleStrategy computes HTF via `ctx.htf_indicators` |
-| Template | `htf_ma_filter_rules` — MA cross gated by HTF SMA trend |
-| Tests | `test_phase_d_builder.py` — full suite green |
+| HTF gate | Backtest + deploy forms require `htf_timeframe` when strategy rule_spec uses HTF indicators |
+| Seed | `python manage.py seed_rule_templates` |
+| Smoke | LiveWorker test with RuleStrategy + HTF; agent README smoke steps |
+
+## Left to do (optional / ops)
+
+| Item | Notes |
+| ---- | ----- |
+| **Merge PR stack** | Prefer merge **#3** (or #E once opened) into `main` — includes C→D; then E |
+| **Windows MT5 smoke** | Real agent: seed templates → backtest M5/H1 → deploy (see `agent/README.md`) |
+| Library SL/TP knobs | Python library strategies still often emit entries without SL/TP metadata |
+| Hedge / multi-position MT5 | Not supported (v1 is netting-style flip) |
+| Deeper nested exprs | Builder supports one-level pct_offset/arith only |
+| Huge CSV / Parquet cache | Still a known risk for very large M1 sets |
+| Tick-mode intrabar | Optional later; SL-before-TP rule remains |
 
 ## Run
 
@@ -41,15 +51,17 @@ Handoff for the **next agent chat**. Read at start; update at end.
 cd tradeBot && source venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py seed_library_strategies
+python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
 ## Last commit
 
-- `a961a86` — Phase D: builder pct_offset/arith and HTF indicator source
+- Phase E: HTF form gate + seed_rule_templates + smoke tests
 
 ## Recommended next work
 
-- Merge PR stack (#1 optional if merging #2 or #3 which include C/A/B).
-- Windows agent smoke-test: deploy `htf_ma_filter_rules` with `htf_timeframe=H1`.
-- Optional: richer nested expressions beyond one-level pct/arith nests.
+- Merge open PRs to `main`.
+- On Windows: follow agent README HTF rule smoke-test.
+- Optional product polish: SL/TP params on library Python strategies.

@@ -9,6 +9,7 @@ from apps.marketdata.timeframes import (
     normalize_timeframe,
 )
 from apps.strategies.models import Strategy
+from apps.strategies.rules.htf_gate import strategy_requires_htf
 
 
 class BacktestRunForm(forms.ModelForm):
@@ -81,5 +82,11 @@ class BacktestRunForm(forms.ModelForm):
             self.add_error(
                 "htf_timeframe",
                 f"HTF must be higher than primary timeframe ({primary}).",
+            )
+        strategy = cleaned.get("strategy")
+        if strategy_requires_htf(strategy) and not htf:
+            self.add_error(
+                "htf_timeframe",
+                "This strategy uses HTF indicators — choose a higher timeframe.",
             )
         return cleaned

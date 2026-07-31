@@ -86,3 +86,13 @@ Logs: `nssm set TradeBotAgent AppStdout C:\path\to\repo\agent\logs\stdout.log` (
 5. Check **Run whether user is logged on or not** (MT5 session must still be available for Algo Trading).
 
 Unload: `nssm stop TradeBotAgent` then `nssm remove TradeBotAgent confirm`.
+
+## Smoke-test: HTF rule strategy
+
+1. On the web host: `python manage.py seed_rule_templates`
+2. Strategies → open **MA cross + HTF filter** (or Customize rules from that template).
+3. Backtest with primary e.g. `M5` and **Higher timeframe** `H1` (required — form blocks blank HTF).
+4. Deploy to the Windows agent with the same HTF field set.
+5. Confirm agent report shows `htf_timeframe` and processes new bars (`/live/`).
+
+Without MT5, the pure-Python LiveWorker tests cover HTF bar fetch + `RuleStrategy` evaluation.
