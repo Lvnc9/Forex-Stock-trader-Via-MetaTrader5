@@ -58,7 +58,7 @@ python manage.py runserver
 
 ## Last commit
 
-- Phase E: HTF form gate + seed_rule_templates + smoke tests
+- `e04cfff` — Phase E: HTF form gate, seed_rule_templates, and smoke path
 
 ## Recommended next work
 
