@@ -8,8 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **This branch** | `cursor/library-strategy-sl-tp-864d` (on Phase E) — **PR #5** |
-| **Open PRs** | #1–#4 (C→E); prefer merge **#4** into `main` first, then **#5** (SL/TP) |
+| **Branch** | `main` (PRs **#1–#5** merged) |
 
 ## Done until now
 
@@ -20,28 +19,24 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | Phase 3 — MT5 agent, live worker, broker API | **Done** |
 | Phase 4 — FX/stock downloads | **Done** |
 | Polish slices 0–7 | **Done** |
-| **C** — HTF bars + SignalEngine/BacktestRunner unify | **Done** (PR #1+) |
-| **A** — Rules expression engine + RuleStrategy | **Done** (PR #2+) |
-| **B** — Rule builder UI, dry-run, delete, Python in-place edit | **Done** (PR #2+) |
-| **D** — Builder pct_offset/arith + HTF indicator source + template | **Done** (PR #3) |
-| **E** — HTF form gate, `seed_rule_templates`, LiveWorker HTF+rules smoke | **Done** (PR #4) |
-| **Library SL/TP knobs** | **Done** (this branch) |
+| **C** — HTF bars + SignalEngine/BacktestRunner unify | **Done** (merged via #4) |
+| **A/B** — Rules engine + builder UI | **Done** (merged via #4) |
+| **D** — Builder pct_offset/arith + HTF indicator source | **Done** (merged via #4) |
+| **E** — HTF form gate, `seed_rule_templates`, smoke path | **Done** (merged #4) |
+| **Library SL/TP knobs** | **Done** (merged #5) |
 
-## This session — library strategy SL/TP
+## Merged this session (ops)
 
-| Item | What |
-| ---- | ---- |
-| Params | Optional `stop_loss_pct` / `take_profit_pct` (default `0` = omit) on `ma_crossover`, `rsi_reversal`, `range_breakout` |
-| Helper | `apps/strategies/library/exits.py` → absolute prices on `Signal.stop_loss` / `take_profit` |
-| Warmup | `SignalEngine._warmup_bars` uses **int** schema only (float pct/levels no longer inflate warmup) |
-| Tests | `apps/strategies/tests/test_library_sl_tp.py` — full suite **63/63** green |
+| PR | What |
+| -- | ---- |
+| **#4** | Phases C→E (superseded #1–#3 content) fast-forwarded to `main` |
+| **#5** | Optional `stop_loss_pct` / `take_profit_pct` on library strategies |
 
-## Left to do (optional / ops)
+## Left to do (optional)
 
 | Item | Notes |
 | ---- | ----- |
-| **Merge PR stack** | Prefer merge **#4** into `main` (includes C→E), then this SL/TP PR (or rebase onto main after #4) |
-| **Windows MT5 smoke** | Real agent: seed templates → backtest M5/H1 → deploy with SL/TP params set |
+| **Windows MT5 smoke** | Seed templates → backtest M5/H1 → deploy; try library strategies with non-zero SL/TP pcts |
 | Hedge / multi-position MT5 | Not supported (v1 is netting-style flip) |
 | Deeper nested exprs | Builder supports one-level pct_offset/arith only |
 | Huge CSV / Parquet cache | Still a known risk for very large M1 sets |
@@ -58,13 +53,12 @@ python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
-## Last commit
+## Last commit on main
 
-- `54007e2` — Add optional SL/TP pct params to library strategies
-- `dde7c89` — docs: record library SL/TP commit hash in untilNow
+- `2c83ea6` — docs: note PR #5 in untilNow handoff (tip before this ops note)
+- Feature tip: `54007e2` — Add optional SL/TP pct params to library strategies
 
 ## Recommended next work
 
-- **Ops first:** merge PR **#4** into `main`, then merge/rebase this SL/TP branch; refresh `untilNow.md` on `main`.
-- On Windows: smoke-test library strategies with non-zero `stop_loss_pct` / `take_profit_pct` so MT5 orders carry SL/TP.
+- On Windows: smoke-test HTF rule strategies and library SL/TP pct params against demo MT5.
 - Do **not** start hedge-mode, Parquet cache, or deeper nested expression UI unless explicitly requested.
