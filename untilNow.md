@@ -8,8 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branch** | `cursor/smoke-library-sltp-live-864d` → merge to `main` |
-| **Main tip** | PRs **#1–#5** already merged |
+| **Branch** | `main` (PRs **#1–#5** merged; smoke path on `main` via #6 commits) |
 
 ## Done until now
 
@@ -20,19 +19,17 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | Phase 3 — MT5 agent, live worker, broker API | **Done** |
 | Phase 4 — FX/stock downloads | **Done** |
 | Polish slices 0–7 | **Done** |
-| Phases **A–E** (rules, builder, HTF, seed) | **Done** (on `main`) |
-| **Library SL/TP knobs** | **Done** (on `main`) |
-| **Automated smoke (HTF + library SL/TP → LiveWorker)** | **Done** (this branch) |
+| Phases **A–E** (rules, builder, HTF, seed) | **Done** |
+| **Library SL/TP knobs** | **Done** |
+| **Automated smoke (HTF + library SL/TP → LiveWorker)** | **Done** (on `main`) |
 
-## This session — smoke path (no Windows MT5 in CI)
+## Smoke path (CI / no Windows MT5)
 
 | Item | What |
 | ---- | ---- |
 | LiveWorker SL/TP | `test_live_worker_sl_tp_smoke` — adapter receives `stop_loss` / `take_profit` |
 | Docs | `agent/README.md` — library SL/TP Windows smoke steps + offline test command |
-| Suite | Full `python manage.py test` green |
-
-Real demo-terminal confirmation still needs a human on Windows (steps in `agent/README.md`).
+| Suite | Full `python manage.py test` **65/65** green |
 
 ## Left to do (optional)
 
@@ -55,11 +52,12 @@ python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
-## Last commit
+## Last commit on main
 
 - `fc05b20` — Add LiveWorker library SL/TP smoke path and docs
+- `0d4d220` — docs: record smoke-path commit hash in untilNow
 
 ## Recommended next work
 
-- On a Windows host with demo MT5: run both smoke sections in `agent/README.md`.
+- On a Windows host with demo MT5: run both smoke sections in `agent/README.md` (HTF rules + library SL/TP).
 - Do **not** start hedge-mode, Parquet cache, or deeper nested expression UI unless explicitly requested.
