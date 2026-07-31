@@ -299,7 +299,36 @@ class RuleStrategyBuilderView(View):
         return redirect("strategies:list")
 
     @staticmethod
-    def _context(form, strategy, template_meta=None):
+    def _expr_side(form, prefix: str) -> dict:
+        return {
+            "ref": form[f"{prefix}_ref"],
+            "indicator": form[f"{prefix}_indicator"],
+            "price": form[f"{prefix}_price"],
+            "value": form[f"{prefix}_value"],
+            "param": form[f"{prefix}_param"],
+            "po_base_ref": form[f"{prefix}_po_base_ref"],
+            "po_base_indicator": form[f"{prefix}_po_base_indicator"],
+            "po_base_price": form[f"{prefix}_po_base_price"],
+            "po_base_value": form[f"{prefix}_po_base_value"],
+            "po_base_param": form[f"{prefix}_po_base_param"],
+            "po_pct_ref": form[f"{prefix}_po_pct_ref"],
+            "po_pct_value": form[f"{prefix}_po_pct_value"],
+            "po_pct_param": form[f"{prefix}_po_pct_param"],
+            "ar_op": form[f"{prefix}_ar_op"],
+            "ar_left_ref": form[f"{prefix}_ar_left_ref"],
+            "ar_left_indicator": form[f"{prefix}_ar_left_indicator"],
+            "ar_left_price": form[f"{prefix}_ar_left_price"],
+            "ar_left_value": form[f"{prefix}_ar_left_value"],
+            "ar_left_param": form[f"{prefix}_ar_left_param"],
+            "ar_right_ref": form[f"{prefix}_ar_right_ref"],
+            "ar_right_indicator": form[f"{prefix}_ar_right_indicator"],
+            "ar_right_price": form[f"{prefix}_ar_right_price"],
+            "ar_right_value": form[f"{prefix}_ar_right_value"],
+            "ar_right_param": form[f"{prefix}_ar_right_param"],
+        }
+
+    @classmethod
+    def _context(cls, form, strategy, template_meta=None):
         param_rows = []
         for i in range(4):
             param_rows.append(
@@ -317,6 +346,7 @@ class RuleStrategyBuilderView(View):
                 {
                     "id": form[f"ind_{i}_id"],
                     "fn": form[f"ind_{i}_fn"],
+                    "source": form[f"ind_{i}_source"],
                     "period": form[f"ind_{i}_period"],
                     "period_param": form[f"ind_{i}_period_param"],
                     "column": form[f"ind_{i}_column"],
@@ -335,16 +365,8 @@ class RuleStrategyBuilderView(View):
                 rules.append(
                     {
                         "op": form[f"{prefix}_op"],
-                        "left_ref": form[f"{prefix}_left_ref"],
-                        "left_indicator": form[f"{prefix}_left_indicator"],
-                        "left_price": form[f"{prefix}_left_price"],
-                        "left_value": form[f"{prefix}_left_value"],
-                        "left_param": form[f"{prefix}_left_param"],
-                        "right_ref": form[f"{prefix}_right_ref"],
-                        "right_indicator": form[f"{prefix}_right_indicator"],
-                        "right_price": form[f"{prefix}_right_price"],
-                        "right_value": form[f"{prefix}_right_value"],
-                        "right_param": form[f"{prefix}_right_param"],
+                        "left": cls._expr_side(form, f"{prefix}_left"),
+                        "right": cls._expr_side(form, f"{prefix}_right"),
                     }
                 )
             group_rows.append({"key": key, "label": label, "logic": form[f"{key}_logic"], "rules": rules})

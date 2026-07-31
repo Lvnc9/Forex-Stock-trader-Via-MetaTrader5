@@ -71,11 +71,15 @@ def validate_spec(spec: dict[str, Any]) -> dict[str, Any]:
             raise ExprError(f"Unknown indicator fn: {fn}")
         if ind_id in seen_inds:
             raise ExprError(f"Duplicate indicator id: {ind_id}")
+        source = (raw.get("source") or "primary").lower()
+        if source not in ("primary", "htf"):
+            raise ExprError(f"Indicator source must be primary or htf: {ind_id}")
         seen_inds.add(ind_id)
         out["indicators"].append(
             {
                 "id": ind_id,
                 "fn": fn,
+                "source": source,
                 "args": deepcopy(raw.get("args") or {}),
             }
         )

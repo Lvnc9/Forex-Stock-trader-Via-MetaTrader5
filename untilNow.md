@@ -8,7 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branches** | `cursor/htf-bars-engine-unification-48fe` (Phase C PR #1) · `cursor/rules-engine-builder-ab-48fe` (A/B on top of C) |
+| **Branches** | PR #1 Phase C · PR #2 Phases A/B (+C) · `cursor/phase-d-builder-expr-htf-48fe` (Phase D) |
 
 ## Plan & workflow
 
@@ -21,31 +21,19 @@ Handoff for the **next agent chat**. Read at start; update at end.
 
 | Phase | Status |
 | ----- | ------ |
-| 1 — Backtest foundation | **Done** |
-| 2 — Strategy UX + deploy review | **Done** |
-| 3 — MT5 agent + live (v1) | **Done** |
-| 4 — Data & stocks breadth | **Done** |
-| Post–Phase 3 polish slices 0–7 | **Done** |
-| **C — HTF bars + engine unification** | **Done** (intact; PR #1) |
-| **A — Rules engine** | **Done** (this branch; was never on remote before) |
-| **B — Rule builder UI** | **Done** (this branch) |
+| 1–4 + polish 0–7 | **Done** |
+| **C — HTF + engine unify** | **Done** (PR #1; also in #2/#3) |
+| **A/B — Rules engine + builder** | **Done** (PR #2; also in #3) |
+| **D — Builder pct_offset/arith + HTF indicators** | **Done** (this branch) |
 
-## Integrity check (this session)
-
-- Phase C files match `origin/cursor/htf-bars-engine-unification-48fe` — **not damaged**.
-- Prior “Phase A/B committed” claim: **false on GitHub** (only `main` + Phase C branch existed). A/B is now landed on `cursor/rules-engine-builder-ab-48fe`.
-
-## Phase A/B (this session)
+## Phase D (this session)
 
 | Item | What |
 | ---- | ---- |
-| Rules engine | `apps/strategies/rules/` — expr language (indicator/price/value/param/pct_offset/arith), schema, `RuleStrategy` runtime |
-| Templates | `ma_cross_rules`, `rsi_rules`, `range_breakout_rules` (pct_offset demo) |
-| Builder UI | `/strategies/rules/new/`, `/strategies/rules/<pk>/edit/`, `?from=<slug>` |
-| Dry-run | Spec validated via real SignalEngine before save |
-| Python lifecycle | `update_custom_strategy_source` edits file in place with rollback |
-| Delete | Blocked when BacktestRun/Deployment references strategy |
-| Model | `Strategy.rule_spec` + `runtime_parameters()` for backtest/live |
+| Builder refs | `pct_offset` + `arith` editable in fixed-slot form (round-trip from templates) |
+| Indicator source | `primary` \| `htf` on each indicator; RuleStrategy computes HTF via `ctx.htf_indicators` |
+| Template | `htf_ma_filter_rules` — MA cross gated by HTF SMA trend |
+| Tests | `test_phase_d_builder.py` — full suite green |
 
 ## Run
 
@@ -58,11 +46,10 @@ python manage.py runserver
 
 ## Last commit
 
-- `5e063e2` — Phases A/B: rules engine and fixed-slot rule builder UI
+- Phase D: builder pct_offset/arith + HTF indicator source
 
 ## Recommended next work
 
-- Merge Phase C PR #1, then this A/B branch (or merge this branch alone — it includes C).
-- Optional Phase D: builder UI for `pct_offset` / nested `arith` (engine already supports them).
-- HTF-consuming library/rule template.
-- Windows agent smoke-test with HTF + rule strategy deploy.
+- Merge PR stack (#1 optional if merging #2 or #3 which include C/A/B).
+- Windows agent smoke-test: deploy `htf_ma_filter_rules` with `htf_timeframe=H1`.
+- Optional: richer nested expressions beyond one-level pct/arith nests.

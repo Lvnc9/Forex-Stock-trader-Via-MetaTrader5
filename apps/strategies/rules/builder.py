@@ -6,14 +6,24 @@ from typing import Any
 
 from django import forms
 
-from apps.strategies.rules.expr import COMPARE_OPS, INDICATOR_FNS, ExprError
+from apps.strategies.rules.expr import ARITH_OPS, COMPARE_OPS, INDICATOR_FNS, ExprError
 from apps.strategies.rules.schema import empty_spec, validate_spec
 
 MAX_PARAMS = 4
 MAX_INDICATORS = 6
 MAX_RULES = 4
 
+SIMPLE_REFS = frozenset({"indicator", "price", "value", "param"})
 REF_CHOICES = [
+    ("", "—"),
+    ("indicator", "Indicator"),
+    ("price", "Price"),
+    ("value", "Value"),
+    ("param", "Param"),
+    ("pct_offset", "Pct offset"),
+    ("arith", "Arithmetic"),
+]
+NESTED_REF_CHOICES = [
     ("", "—"),
     ("indicator", "Indicator"),
     ("price", "Price"),
@@ -25,6 +35,8 @@ OP_CHOICES = [("", "—")] + [(op, op) for op in sorted(COMPARE_OPS)]
 FN_CHOICES = [("", "—")] + [(fn, fn) for fn in sorted(INDICATOR_FNS)]
 PRICE_CHOICES = [("", "—"), ("open", "open"), ("high", "high"), ("low", "low"), ("close", "close")]
 LOGIC_CHOICES = [("and", "AND"), ("or", "OR")]
+ARITH_CHOICES = [("", "—")] + [(op, op) for op in sorted(ARITH_OPS)]
+SOURCE_CHOICES = [("primary", "Primary"), ("htf", "HTF")]
 
 
 class RuleBuilderForm(forms.Form):
@@ -68,6 +80,12 @@ class RuleBuilderForm(forms.Form):
         for i in range(MAX_INDICATORS):
             self.fields[f"ind_{i}_id"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
             self.fields[f"ind_{i}_fn"] = forms.ChoiceField(choices=FN_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+            self.fields[f"ind_{i}_source"] = forms.ChoiceField(
+                choices=SOURCE_CHOICES,
+                required=False,
+                initial="primary",
+                widget=forms.Select(attrs={"class": "tb-input"}),
+            )
             self.fields[f"ind_{i}_period"] = forms.IntegerField(required=False, min_value=1, widget=forms.NumberInput(attrs={"class": "tb-input"}))
             self.fields[f"ind_{i}_period_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
             self.fields[f"ind_{i}_column"] = forms.ChoiceField(choices=PRICE_CHOICES, required=False, initial="close", widget=forms.Select(attrs={"class": "tb-input"}))
@@ -83,11 +101,34 @@ class RuleBuilderForm(forms.Form):
                 prefix = f"{group}_{i}"
                 self.fields[f"{prefix}_op"] = forms.ChoiceField(choices=OP_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
                 for side in ("left", "right"):
-                    self.fields[f"{prefix}_{side}_ref"] = forms.ChoiceField(choices=REF_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
-                    self.fields[f"{prefix}_{side}_indicator"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
-                    self.fields[f"{prefix}_{side}_price"] = forms.ChoiceField(choices=PRICE_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
-                    self.fields[f"{prefix}_{side}_value"] = forms.FloatField(required=False, widget=forms.NumberInput(attrs={"class": "tb-input", "step": "any"}))
-                    self.fields[f"{prefix}_{side}_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+                    self._add_expr_fields(f"{prefix}_{side}")
+
+    def _add_expr_fields(self, prefix: str) -> None:
+        self.fields[f"{prefix}_ref"] = forms.ChoiceField(choices=REF_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_indicator"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_price"] = forms.ChoiceField(choices=PRICE_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_value"] = forms.FloatField(required=False, widget=forms.NumberInput(attrs={"class": "tb-input", "step": "any"}))
+        self.fields[f"{prefix}_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+
+        # pct_offset: base + pct (simple nested refs)
+        self.fields[f"{prefix}_po_base_ref"] = forms.ChoiceField(choices=NESTED_REF_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_po_base_indicator"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_po_base_price"] = forms.ChoiceField(choices=PRICE_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_po_base_value"] = forms.FloatField(required=False, widget=forms.NumberInput(attrs={"class": "tb-input", "step": "any"}))
+        self.fields[f"{prefix}_po_base_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_po_pct_ref"] = forms.ChoiceField(choices=NESTED_REF_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        self.fields[f"{prefix}_po_pct_value"] = forms.FloatField(required=False, widget=forms.NumberInput(attrs={"class": "tb-input", "step": "any"}))
+        self.fields[f"{prefix}_po_pct_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+
+        # arith: op + left + right (simple nested refs)
+        self.fields[f"{prefix}_ar_op"] = forms.ChoiceField(choices=ARITH_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+        for nest in ("ar_left", "ar_right"):
+            nest_prefix = f"{prefix}_{nest}"
+            self.fields[f"{nest_prefix}_ref"] = forms.ChoiceField(choices=NESTED_REF_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+            self.fields[f"{nest_prefix}_indicator"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
+            self.fields[f"{nest_prefix}_price"] = forms.ChoiceField(choices=PRICE_CHOICES, required=False, widget=forms.Select(attrs={"class": "tb-input"}))
+            self.fields[f"{nest_prefix}_value"] = forms.FloatField(required=False, widget=forms.NumberInput(attrs={"class": "tb-input", "step": "any"}))
+            self.fields[f"{nest_prefix}_param"] = forms.CharField(required=False, max_length=40, widget=forms.TextInput(attrs={"class": "tb-input"}))
 
     def build_spec(self) -> dict[str, Any]:
         if not self.is_valid():
@@ -124,7 +165,8 @@ class RuleBuilderForm(forms.Form):
             column = data.get(f"ind_{i}_column") or "close"
             if column:
                 args["column"] = column
-            spec["indicators"].append({"id": ind_id, "fn": fn, "args": args})
+            source = data.get(f"ind_{i}_source") or "primary"
+            spec["indicators"].append({"id": ind_id, "fn": fn, "source": source, "args": args})
 
         for group in ("entry_long", "entry_short", "exit_long", "exit_short"):
             rules = []
@@ -133,8 +175,8 @@ class RuleBuilderForm(forms.Form):
                 op = data.get(f"{prefix}_op") or ""
                 if not op:
                     continue
-                left = self._parse_ref(data, f"{prefix}_left")
-                right = self._parse_ref(data, f"{prefix}_right")
+                left = self._parse_expr(data, f"{prefix}_left")
+                right = self._parse_expr(data, f"{prefix}_right")
                 if left is None or right is None:
                     raise ExprError(f"Incomplete rule in {group} slot {i + 1}")
                 rules.append({"op": op, "left": left, "right": right})
@@ -161,11 +203,31 @@ class RuleBuilderForm(forms.Form):
 
         return validate_spec(spec)
 
-    @staticmethod
-    def _parse_ref(data: dict, prefix: str) -> dict | None:
+    def _parse_expr(self, data: dict, prefix: str) -> dict | None:
         ref = data.get(f"{prefix}_ref") or ""
         if not ref:
             return None
+        if ref in SIMPLE_REFS:
+            return self._parse_simple(data, prefix, ref)
+        if ref == "pct_offset":
+            base = self._parse_simple(data, f"{prefix}_po_base", data.get(f"{prefix}_po_base_ref") or "")
+            pct = self._parse_simple(data, f"{prefix}_po_pct", data.get(f"{prefix}_po_pct_ref") or "")
+            if base is None or pct is None:
+                return None
+            return {"ref": "pct_offset", "base": base, "pct": pct}
+        if ref == "arith":
+            op = data.get(f"{prefix}_ar_op") or ""
+            if op not in ARITH_OPS:
+                return None
+            left = self._parse_simple(data, f"{prefix}_ar_left", data.get(f"{prefix}_ar_left_ref") or "")
+            right = self._parse_simple(data, f"{prefix}_ar_right", data.get(f"{prefix}_ar_right_ref") or "")
+            if left is None or right is None:
+                return None
+            return {"ref": "arith", "op": op, "left": left, "right": right}
+        return None
+
+    @staticmethod
+    def _parse_simple(data: dict, prefix: str, ref: str) -> dict | None:
         if ref == "indicator":
             ind_id = (data.get(f"{prefix}_indicator") or "").strip()
             if not ind_id:
@@ -186,6 +248,44 @@ class RuleBuilderForm(forms.Form):
         return None
 
 
+def _fill_simple_initial(initial: dict[str, Any], prefix: str, node: dict) -> None:
+    ref = node.get("ref") or node.get("type") or ""
+    if ref not in SIMPLE_REFS:
+        return
+    initial[f"{prefix}_ref"] = ref
+    if ref == "indicator":
+        initial[f"{prefix}_indicator"] = node.get("id", "")
+    elif ref == "price":
+        initial[f"{prefix}_price"] = node.get("field", "close")
+    elif ref == "value":
+        initial[f"{prefix}_value"] = node.get("value")
+    elif ref == "param":
+        initial[f"{prefix}_param"] = node.get("name", "")
+
+
+def _fill_expr_initial(initial: dict[str, Any], prefix: str, node: dict) -> None:
+    ref = node.get("ref") or node.get("type") or ""
+    if ref in SIMPLE_REFS:
+        _fill_simple_initial(initial, prefix, node)
+        return
+    if ref == "pct_offset":
+        initial[f"{prefix}_ref"] = "pct_offset"
+        base = node.get("base") or {}
+        pct = node.get("pct") or {}
+        _fill_simple_initial(initial, f"{prefix}_po_base", {**base, "ref": base.get("ref") or base.get("type")})
+        # remap nested keys: _fill_simple writes prefix_ref etc; for po_base we need po_base_ref
+        # _fill_simple_initial already uses prefix_ref — good for po_base
+        _fill_simple_initial(initial, f"{prefix}_po_pct", {**pct, "ref": pct.get("ref") or pct.get("type")})
+        return
+    if ref == "arith":
+        initial[f"{prefix}_ref"] = "arith"
+        initial[f"{prefix}_ar_op"] = node.get("op", "")
+        left = node.get("left") or {}
+        right = node.get("right") or {}
+        _fill_simple_initial(initial, f"{prefix}_ar_left", {**left, "ref": left.get("ref") or left.get("type")})
+        _fill_simple_initial(initial, f"{prefix}_ar_right", {**right, "ref": right.get("ref") or right.get("type")})
+
+
 def initial_from_spec(spec: dict[str, Any], *, name: str = "", description: str = "") -> dict[str, Any]:
     """Map a validated rule_spec into RuleBuilderForm initial data."""
     initial: dict[str, Any] = {"name": name, "description": description}
@@ -201,6 +301,7 @@ def initial_from_spec(spec: dict[str, Any], *, name: str = "", description: str 
     for i, ind in enumerate((spec.get("indicators") or [])[:MAX_INDICATORS]):
         initial[f"ind_{i}_id"] = ind.get("id", "")
         initial[f"ind_{i}_fn"] = ind.get("fn", "")
+        initial[f"ind_{i}_source"] = ind.get("source", "primary")
         args = ind.get("args") or {}
         period = args.get("period")
         if isinstance(period, dict) and (period.get("ref") == "param"):
@@ -216,17 +317,7 @@ def initial_from_spec(spec: dict[str, Any], *, name: str = "", description: str 
             prefix = f"{group}_{i}"
             initial[f"{prefix}_op"] = rule.get("op", "")
             for side in ("left", "right"):
-                node = rule.get(side) or {}
-                ref = node.get("ref") or node.get("type") or ""
-                initial[f"{prefix}_{side}_ref"] = ref if ref in {"indicator", "price", "value", "param"} else ""
-                if ref == "indicator":
-                    initial[f"{prefix}_{side}_indicator"] = node.get("id", "")
-                elif ref == "price":
-                    initial[f"{prefix}_{side}_price"] = node.get("field", "close")
-                elif ref == "value":
-                    initial[f"{prefix}_{side}_value"] = node.get("value")
-                elif ref == "param":
-                    initial[f"{prefix}_{side}_param"] = node.get("name", "")
+                _fill_expr_initial(initial, f"{prefix}_{side}", rule.get(side) or {})
 
     sl = spec.get("stop_loss") or {}
     if sl.get("type") == "pct":

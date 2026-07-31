@@ -47,9 +47,10 @@
     <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Indicators (up to 6)</h2>
     <div class="space-y-3">
       {% for row in ind_rows %}
-        <div class="grid gap-2 sm:grid-cols-5">
+        <div class="grid gap-2 sm:grid-cols-6">
           <div><label class="tb-label">Id</label>{{ row.id }}</div>
           <div><label class="tb-label">Fn</label>{{ row.fn }}</div>
+          <div><label class="tb-label">Source</label>{{ row.source }}</div>
           <div><label class="tb-label">Period</label>{{ row.period }}</div>
           <div><label class="tb-label">Period param</label>{{ row.period_param }}</div>
           <div><label class="tb-label">Column</label>{{ row.column }}</div>
@@ -69,26 +70,8 @@
           <div class="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
             <div class="mb-3 w-40"><label class="tb-label">Op</label>{{ rule.op }}</div>
             <div class="grid gap-4 lg:grid-cols-2">
-              <div>
-                <p class="mb-2 text-xs uppercase text-zinc-500">Left</p>
-                <div class="grid gap-2 sm:grid-cols-2">
-                  <div><label class="tb-label">Ref</label>{{ rule.left_ref }}</div>
-                  <div><label class="tb-label">Indicator id</label>{{ rule.left_indicator }}</div>
-                  <div><label class="tb-label">Price</label>{{ rule.left_price }}</div>
-                  <div><label class="tb-label">Value</label>{{ rule.left_value }}</div>
-                  <div><label class="tb-label">Param</label>{{ rule.left_param }}</div>
-                </div>
-              </div>
-              <div>
-                <p class="mb-2 text-xs uppercase text-zinc-500">Right</p>
-                <div class="grid gap-2 sm:grid-cols-2">
-                  <div><label class="tb-label">Ref</label>{{ rule.right_ref }}</div>
-                  <div><label class="tb-label">Indicator id</label>{{ rule.right_indicator }}</div>
-                  <div><label class="tb-label">Price</label>{{ rule.right_price }}</div>
-                  <div><label class="tb-label">Value</label>{{ rule.right_value }}</div>
-                  <div><label class="tb-label">Param</label>{{ rule.right_param }}</div>
-                </div>
-              </div>
+              {% include "strategies/_expr_side.html" with title="Left" side=rule.left %}
+              {% include "strategies/_expr_side.html" with title="Right" side=rule.right %}
             </div>
           </div>
         {% endfor %}
@@ -112,7 +95,11 @@
     </div>
   </section>
 
-  <p class="text-xs text-zinc-600">Dry-run validation runs against synthetic bars before save. Builder refs: indicator / price / value / param (pct_offset &amp; arith still work in templates / JSON).</p>
+  <p class="text-xs text-zinc-600">
+    Dry-run validation runs against synthetic bars before save.
+    Refs: indicator / price / value / param / pct_offset / arith.
+    Indicator source <span class="text-zinc-400">HTF</span> needs an HTF timeframe on backtest or deploy.
+  </p>
 
   <div class="flex gap-3">
     <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-sky-400">

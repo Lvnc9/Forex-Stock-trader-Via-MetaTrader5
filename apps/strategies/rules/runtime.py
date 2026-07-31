@@ -40,7 +40,15 @@ class RuleStrategy(BaseStrategy):
         self.parameters = self.validate_parameters(merged)
 
     def on_bar(self, ctx: BarContext) -> Signal | None:
-        computed = compute_indicators(self.rule_spec["indicators"], ctx.indicators, self.parameters)
+        primary_specs = [i for i in self.rule_spec["indicators"] if i.get("source", "primary") != "htf"]
+        htf_specs = [i for i in self.rule_spec["indicators"] if i.get("source") == "htf"]
+
+        computed = compute_indicators(primary_specs, ctx.indicators, self.parameters)
+        if htf_specs:
+            if ctx.htf_indicators is None:
+                # HTF required by spec but unavailable — no trade.
+                return None
+            computed.update(compute_indicators(htf_specs, ctx.htf_indicators, self.parameters))
 
         if eval_rule_group(
             self.rule_spec["exit_long"],

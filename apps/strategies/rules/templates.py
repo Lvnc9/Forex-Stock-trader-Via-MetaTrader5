@@ -106,16 +106,26 @@ RULE_TEMPLATES: dict[str, dict[str, Any]] = {
             "parameters": [
                 {"name": "lookback", "type": "int", "default": 20, "min": 5, "max": 200},
                 {"name": "buffer_pct", "type": "float", "default": 0.0, "min": 0.0, "max": 5.0},
+                {
+                    "name": "short_buffer_pct",
+                    "type": "float",
+                    "default": 0.0,
+                    "min": -5.0,
+                    "max": 0.0,
+                    "label": "Short buffer % (negative or zero)",
+                },
             ],
             "indicators": [
                 {
                     "id": "range_high",
                     "fn": "sma",
+                    "source": "primary",
                     "args": {"period": {"ref": "param", "name": "lookback"}, "column": "high"},
                 },
                 {
                     "id": "range_low",
                     "fn": "sma",
+                    "source": "primary",
                     "args": {"period": {"ref": "param", "name": "lookback"}, "column": "low"},
                 },
             ],
@@ -142,12 +152,7 @@ RULE_TEMPLATES: dict[str, dict[str, Any]] = {
                         "right": {
                             "ref": "pct_offset",
                             "base": {"ref": "indicator", "id": "range_low"},
-                            "pct": {
-                                "ref": "arith",
-                                "op": "*",
-                                "left": {"ref": "param", "name": "buffer_pct"},
-                                "right": {"ref": "value", "value": -1},
-                            },
+                            "pct": {"ref": "param", "name": "short_buffer_pct"},
                         },
                     }
                 ],
@@ -156,6 +161,78 @@ RULE_TEMPLATES: dict[str, dict[str, Any]] = {
             "exit_short": {"logic": "and", "rules": []},
             "stop_loss": {"type": "pct", "value": 1.5},
             "take_profit": {"type": "pct", "value": 3.0},
+        },
+    },
+    "htf_ma_filter_rules": {
+        "name": "MA cross + HTF filter",
+        "description": "Primary MA cross only when HTF close is above (long) or below (short) HTF SMA. Set HTF timeframe on backtest/deploy.",
+        "spec": {
+            "version": 1,
+            "parameters": [
+                {"name": "fast_period", "type": "int", "default": 10, "min": 2, "max": 200},
+                {"name": "slow_period", "type": "int", "default": 30, "min": 3, "max": 400},
+                {"name": "htf_sma_period", "type": "int", "default": 50, "min": 5, "max": 400},
+            ],
+            "indicators": [
+                {
+                    "id": "fast",
+                    "fn": "sma",
+                    "source": "primary",
+                    "args": {"period": {"ref": "param", "name": "fast_period"}},
+                },
+                {
+                    "id": "slow",
+                    "fn": "sma",
+                    "source": "primary",
+                    "args": {"period": {"ref": "param", "name": "slow_period"}},
+                },
+                {
+                    "id": "htf_sma",
+                    "fn": "sma",
+                    "source": "htf",
+                    "args": {"period": {"ref": "param", "name": "htf_sma_period"}},
+                },
+                {
+                    "id": "htf_close",
+                    "fn": "sma",
+                    "source": "htf",
+                    "args": {"period": 1, "column": "close"},
+                },
+            ],
+            "entry_long": {
+                "logic": "and",
+                "rules": [
+                    {
+                        "op": "cross_above",
+                        "left": {"ref": "indicator", "id": "fast"},
+                        "right": {"ref": "indicator", "id": "slow"},
+                    },
+                    {
+                        "op": ">",
+                        "left": {"ref": "indicator", "id": "htf_close"},
+                        "right": {"ref": "indicator", "id": "htf_sma"},
+                    },
+                ],
+            },
+            "entry_short": {
+                "logic": "and",
+                "rules": [
+                    {
+                        "op": "cross_below",
+                        "left": {"ref": "indicator", "id": "fast"},
+                        "right": {"ref": "indicator", "id": "slow"},
+                    },
+                    {
+                        "op": "<",
+                        "left": {"ref": "indicator", "id": "htf_close"},
+                        "right": {"ref": "indicator", "id": "htf_sma"},
+                    },
+                ],
+            },
+            "exit_long": {"logic": "and", "rules": []},
+            "exit_short": {"logic": "and", "rules": []},
+            "stop_loss": {"type": "atr", "mult": 1.5, "period": 14},
+            "take_profit": {"type": "rr", "ratio": 2.0},
         },
     },
 }

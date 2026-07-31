@@ -529,6 +529,7 @@ Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in
 | Phase 4 data | management command | FX majors + stock path per plan | **done** |
 | HTF + engine unify | `SignalEngine`, `BacktestRunner`, live worker | Optional HTF bars for backtest/live; shared bar loop | **done (Phase C)** |
 | Rules engine + builder | `apps/strategies/rules/` | JSON rule-spec strategies + fixed-slot builder UI | **done (Phases A/B)** |
+| Builder expr + HTF inds | `rules/builder.py`, templates | pct_offset/arith in UI; indicator `source: htf` | **done (Phase D)** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
