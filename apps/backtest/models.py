@@ -15,6 +15,12 @@ class BacktestRun(models.Model):
     )
     catalog_slug = models.SlugField(max_length=80)
     timeframe = models.CharField(max_length=8, default="M5")
+    htf_timeframe = models.CharField(
+        max_length=8,
+        blank=True,
+        default="",
+        help_text="Optional higher timeframe for multi-TF strategies (empty = none).",
+    )
     start = models.DateField()
     end = models.DateField()
     initial_balance = models.DecimalField(max_digits=14, decimal_places=2, default=10_000)

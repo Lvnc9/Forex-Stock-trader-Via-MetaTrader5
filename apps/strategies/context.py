@@ -31,3 +31,10 @@ class BarContext:
     @property
     def low(self) -> float:
         return float(self.bars["low"].iloc[-1])
+
+    @property
+    def htf_indicators(self) -> IndicatorRegistry | None:
+        """Indicator helpers on the HTF window when multi-timeframe bars are provided."""
+        if self.htf_bars is None or self.htf_bars.empty:
+            return None
+        return IndicatorRegistry(self.htf_bars)

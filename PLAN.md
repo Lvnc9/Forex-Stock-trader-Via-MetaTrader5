@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open:** none of the original Phase 4 / polish backlog items — see completed table below. Further hardening (hedging accounts, richer SL/TP from library strategies) is optional.
+**Still open:** optional hardening (hedging accounts, richer SL/TP from library strategies, multi-TF library strategies that consume `ctx.htf_bars`). Phase C (HTF wiring + SignalEngine/BacktestRunner unification) is implemented — see [untilNow.md](untilNow.md).
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
@@ -527,6 +527,7 @@ Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in
 | Celery backtests | `apps/backtest/tasks.py` | Async long runs + HTMX progress (eager default) | **done** |
 | Windows Service | `agent/` docs | Run agent as service on trading VPS | **done** |
 | Phase 4 data | management command | FX majors + stock path per plan | **done** |
+| HTF + engine unify | `SignalEngine`, `BacktestRunner`, live worker | Optional HTF bars for backtest/live; shared bar loop | **done (Phase C)** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 

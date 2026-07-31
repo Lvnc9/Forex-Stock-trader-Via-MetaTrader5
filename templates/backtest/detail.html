@@ -9,7 +9,9 @@
 {% block content %}
 <div class="mb-6">
   <a href="{% url 'backtest:list' %}" class="text-sm text-sky-400 hover:text-sky-300">← All backtests</a>
-  <h2 class="mt-2 text-lg font-semibold text-white">{{ run.strategy.name }} · {{ run.catalog_slug }} · {{ run.timeframe }}</h2>
+  <h2 class="mt-2 text-lg font-semibold text-white">
+    {{ run.strategy.name }} · {{ run.catalog_slug }} · {{ run.timeframe }}{% if run.htf_timeframe %} / {{ run.htf_timeframe }} HTF{% endif %}
+  </h2>
   <p class="text-sm text-zinc-500">{{ run.start }} → {{ run.end }}</p>
 </div>
 

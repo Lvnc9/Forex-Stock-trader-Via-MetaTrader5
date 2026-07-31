@@ -8,7 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branch** | `main` |
+| **Branch** | `cursor/htf-bars-engine-unification-48fe` (Phase C) → merge to `main` |
 
 ## Plan & workflow
 
@@ -17,7 +17,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 - Data downloads: [docs/DATA.md](./docs/DATA.md)
 - Conventions: [AGENTS.md](./AGENTS.md)
 
-## Phase status (2026-07-29)
+## Phase status (2026-07-31)
 
 | Phase | Status |
 | ----- | ------ |
@@ -26,20 +26,21 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | 3 — MT5 agent + live (v1) | **Done** |
 | 4 — Data & stocks breadth | **Done** |
 | Post–Phase 3 polish slices 0–7 | **Done** |
+| **C — HTF bars + engine unification** | **Done (this branch)** |
+| A/B — Rules engine + builder UI | **Not in repo** (prior chat verified locally but never committed) |
 
-## Polish slices completed this session
+## Phase C (this session)
 
-| Slice | What |
-| ----- | ---- |
-| 0 | Fixed `agent/mt5_adapter.py` SyntaxError (`self.timeframe_constant`) |
-| 1 | Windows Service / NSSM docs + `agent/scripts/install-service-nssm.ps1` |
-| 2 | Live confirm even if agent offline; API hides unconfirmed live armed deps |
-| 3 | Non-admin Symbol map CRUD at `/data/symbols/` + deploy form map fill |
-| 4a | `download_bars` (dukascopy-node FX majors) |
-| 4b | `download_stocks` (yfinance) + [docs/DATA.md](./docs/DATA.md) |
-| 5 | `DeploymentEvent` audit log on arm/pause/stop + agent errors |
-| 6 | Live/backtest flip + SL/TP via `position_intent` + adapter |
-| 7 | Celery tasks (eager by default) + HTMX refresh on pending backtests |
+| Item | What |
+| ---- | ---- |
+| SignalEngine | Shared `build_context` + `on_latest_bar`; HTF window via `htf_bars.loc[:ts]` |
+| BacktestRunner | Uses `SignalEngine.run` for signals (no duplicate on_bar loop); accepts `htf_bars` |
+| Loader | `prepare_primary_and_htf` + `apps/marketdata/timeframes.py` helpers |
+| Models | Optional `htf_timeframe` on `BacktestRun` and `Deployment` (+ migrations) |
+| UI / API | Backtest + deploy forms; agent deployments JSON includes `htf_timeframe` |
+| LiveWorker | Fetches HTF rates when set; evaluates via `SignalEngine.on_latest_bar` |
+| Context | `BarContext.htf_indicators` helper |
+| Tests | `apps/strategies/tests/test_phase_c_htf.py` — full suite **36/36** green |
 
 ## Run
 
@@ -56,10 +57,11 @@ Agent (Windows): see [agent/README.md](./agent/README.md).
 
 ## Last commit
 
-- `d707feb` — Complete polish slices 0–7
+- Phase C: HTF bars + SignalEngine/BacktestRunner unification (this branch)
 
 ## Recommended next work
 
-- Smoke-test Windows agent + demo MT5 after Slice 0 fix
-- Library strategies that emit SL/TP levels
-- Hedge-mode / multi-position MT5 accounts if needed
+- Re-land **Phase A/B** (rules engine + rule builder UI) if still desired — prior work was never pushed to git.
+- Optional: library strategy that actually consumes `ctx.htf_bars` / `ctx.htf_indicators`.
+- Builder expression picker for `pct_offset` / nested arithmetic (scope limit from Phase B notes).
+- Smoke-test Windows agent with an HTF deployment (`htf_timeframe` in API payload).

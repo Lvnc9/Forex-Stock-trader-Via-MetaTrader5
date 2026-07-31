@@ -9,7 +9,7 @@
     <div><dt class="text-zinc-500">Agent</dt><dd class="text-zinc-200">{{ deployment.agent.name }}</dd></div>
     <div><dt class="text-zinc-500">Catalog slug</dt><dd class="font-mono">{{ deployment.catalog_slug }}</dd></div>
     <div><dt class="text-zinc-500">MT5 symbol</dt><dd class="font-mono">{{ deployment.mt5_symbol }}</dd></div>
-    <div><dt class="text-zinc-500">Timeframe · lot</dt><dd>{{ deployment.timeframe }} · {{ deployment.lot_size }}</dd></div>
+    <div><dt class="text-zinc-500">Timeframe · lot</dt><dd>{{ deployment.timeframe }}{% if deployment.htf_timeframe %} / {{ deployment.htf_timeframe }} HTF{% endif %} · {{ deployment.lot_size }}</dd></div>
     <div class="sm:col-span-2"><dt class="text-zinc-500">Parameters</dt><dd class="font-mono text-xs">{{ deployment.parameters }}</dd></div>
     <div class="sm:col-span-2"><dt class="text-zinc-500">Module</dt><dd class="font-mono text-xs">{{ deployment.strategy.module_path }}</dd></div>
   </dl>

@@ -21,6 +21,12 @@ class Deployment(models.Model):
     catalog_slug = models.SlugField(max_length=80)
     mt5_symbol = models.CharField(max_length=64)
     timeframe = models.CharField(max_length=8, default="M5")
+    htf_timeframe = models.CharField(
+        max_length=8,
+        blank=True,
+        default="",
+        help_text="Optional higher timeframe bars for multi-TF strategies (empty = none).",
+    )
     lot_size = models.FloatField(default=0.01)
     parameters = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)

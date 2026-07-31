@@ -18,7 +18,29 @@ class SignalEvent:
 
 
 class SignalEngine:
-    """Bar-by-bar strategy runner (used by backtester and live worker)."""
+    """Bar-by-bar strategy runner (shared by backtester and live worker)."""
+
+    def build_context(
+        self,
+        strategy: BaseStrategy,
+        bars: pd.DataFrame,
+        bar_index: int,
+        *,
+        htf_bars: pd.DataFrame | None = None,
+    ) -> BarContext:
+        window = bars.iloc[: bar_index + 1]
+        htf_window = None
+        if htf_bars is not None and not htf_bars.empty:
+            ts = window.index[-1]
+            htf_window = htf_bars.loc[:ts]
+        return BarContext(
+            bar_index=bar_index,
+            timestamp=window.index[-1],
+            bars=window,
+            parameters=strategy.parameters,
+            indicators=IndicatorRegistry(window),
+            htf_bars=htf_window,
+        )
 
     def run(
         self,
@@ -37,25 +59,30 @@ class SignalEngine:
         for i in range(len(bars)):
             if i + 1 < min_bars:
                 continue
-            window = bars.iloc[: i + 1]
-            htf_window = None
-            if htf_bars is not None and not htf_bars.empty:
-                ts = window.index[-1]
-                htf_window = htf_bars.loc[:ts]
-
-            ctx = BarContext(
-                bar_index=i,
-                timestamp=window.index[-1],
-                bars=window,
-                parameters=strategy.parameters,
-                indicators=IndicatorRegistry(window),
-                htf_bars=htf_window,
-            )
+            ctx = self.build_context(strategy, bars, i, htf_bars=htf_bars)
             signal = strategy.on_bar(ctx)
             if signal is not None:
                 events.append(SignalEvent(bar_index=i, timestamp=ctx.timestamp, signal=signal))
 
         return events
+
+    def on_latest_bar(
+        self,
+        strategy: BaseStrategy,
+        bars: pd.DataFrame,
+        *,
+        htf_bars: pd.DataFrame | None = None,
+        warmup: int | None = None,
+    ) -> Signal | None:
+        """Evaluate strategy on the last closed bar only (live path)."""
+        if bars.empty:
+            return None
+        min_bars = warmup if warmup is not None else self._warmup_bars(strategy)
+        i = len(bars) - 1
+        if i + 1 < min_bars:
+            return None
+        ctx = self.build_context(strategy, bars, i, htf_bars=htf_bars)
+        return strategy.on_bar(ctx)
 
     @staticmethod
     def _warmup_bars(strategy: BaseStrategy) -> int:

@@ -77,3 +77,22 @@ def align_htf(primary: pd.DataFrame, htf: pd.DataFrame) -> pd.DataFrame:
         return htf
     aligned = htf.reindex(primary.index, method="ffill")
     return aligned
+
+
+def prepare_primary_and_htf(
+    m1: pd.DataFrame,
+    timeframe: str,
+    htf_timeframe: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+    """Resample M1 into primary TF and optional coarser HTF series."""
+    from apps.marketdata.timeframes import is_higher_timeframe, normalize_timeframe
+
+    primary = resample_bars(m1, timeframe)
+    htf_tf = normalize_timeframe(htf_timeframe or "")
+    if not htf_tf:
+        return primary, None
+    if not is_higher_timeframe(htf_tf, timeframe):
+        raise ValueError(
+            f"HTF timeframe {htf_tf} must be higher than primary timeframe {normalize_timeframe(timeframe)}."
+        )
+    return primary, resample_bars(m1, htf_tf)

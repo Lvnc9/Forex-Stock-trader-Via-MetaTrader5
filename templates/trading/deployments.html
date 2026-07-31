@@ -26,7 +26,7 @@
           <tr>
             <td class="px-4 py-3 text-white">{{ d.strategy.name }}</td>
             <td class="px-4 py-3 text-zinc-400">{{ d.agent.name }}</td>
-            <td class="px-4 py-3 font-mono text-xs">{{ d.mt5_symbol }} · {{ d.timeframe }}</td>
+            <td class="px-4 py-3 font-mono text-xs">{{ d.mt5_symbol }} · {{ d.timeframe }}{% if d.htf_timeframe %}/{{ d.htf_timeframe }}{% endif %}</td>
             <td class="px-4 py-3 text-xs text-zinc-500">
               {% if d.last_agent_report.last_bar %}
                 bar {{ d.last_agent_report.last_bar|truncatechars:22 }}

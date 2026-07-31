@@ -7,8 +7,7 @@ from agent.bootstrap import ensure_repo_root
 
 ensure_repo_root()
 
-from apps.strategies.context import BarContext  # noqa: E402
-from apps.strategies.indicators.registry import IndicatorRegistry  # noqa: E402
+from apps.strategies.engine import SignalEngine  # noqa: E402
 from apps.strategies.loader import instantiate_strategy  # noqa: E402
 from apps.strategies.position_intent import resolve_signal_intent  # noqa: E402
 from apps.strategies.signals import Signal  # noqa: E402
@@ -23,6 +22,7 @@ class DeploymentRuntime:
 @dataclass
 class LiveWorker:
     adapter: Any
+    engine: SignalEngine = field(default_factory=SignalEngine)
     runtimes: dict[int, DeploymentRuntime] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
 
@@ -41,6 +41,7 @@ class LiveWorker:
         dep_id = int(dep["id"])
         symbol = dep["mt5_symbol"]
         tf = dep["timeframe"]
+        htf_tf = (dep.get("htf_timeframe") or "").strip()
         lot = float(dep.get("lot_size") or 0.01)
         runtime = self.runtimes.setdefault(dep_id, DeploymentRuntime(deployment_id=dep_id))
 
@@ -64,15 +65,14 @@ class LiveWorker:
             self.errors.append(f"dep {dep_id}: strategy load failed: {exc}")
             return {"id": dep_id, "last_bar": last_iso, "status": "strategy_error"}
 
-        window = bars
-        ctx = BarContext(
-            bar_index=len(window) - 1,
-            timestamp=last_ts,
-            bars=window,
-            parameters=strategy.parameters,
-            indicators=IndicatorRegistry(window),
-        )
-        signal: Signal | None = strategy.on_bar(ctx)
+        htf_bars = None
+        if htf_tf:
+            htf_bars = self.adapter.copy_rates_df(symbol, htf_tf)
+            if htf_bars.empty:
+                self.errors.append(f"dep {dep_id}: insufficient HTF bars ({htf_tf}) for {symbol}")
+                return {"id": dep_id, "last_bar": last_iso, "status": "no_htf_data"}
+
+        signal: Signal | None = self.engine.on_latest_bar(strategy, bars, htf_bars=htf_bars)
         action_result = None
         if signal is not None:
             open_side = None
@@ -99,4 +99,5 @@ class LiveWorker:
             "status": "processed",
             "signal": signal.action.value if signal else None,
             "order": action_result,
+            "htf_timeframe": htf_tf or None,
         }

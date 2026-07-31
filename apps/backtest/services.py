@@ -7,12 +7,12 @@ from django.utils import timezone
 
 from apps.backtest.models import BacktestRun
 from apps.backtest.runner import BacktestRunner, TradeRecord
-from apps.marketdata.loader import load_m1_bars, resample_bars
+from apps.marketdata.loader import load_m1_bars, prepare_primary_and_htf
 from apps.strategies.loader import instantiate_strategy
 
 
 def execute_backtest(run: BacktestRun) -> BacktestRun:
-    """Load bars, run BacktestRunner, persist metrics on *run*."""
+    """Load bars (primary + optional HTF), run BacktestRunner, persist metrics."""
     run.status = BacktestRun.Status.RUNNING
     run.error_message = ""
     run.save(update_fields=["status", "error_message"])
@@ -27,13 +27,18 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
             start=start_dt,
             end=end_dt,
         )
-        bars = resample_bars(m1, run.timeframe)
+        bars, htf_bars = prepare_primary_and_htf(
+            m1,
+            run.timeframe,
+            run.htf_timeframe or None,
+        )
         if bars.empty:
             raise ValueError("No bars in selected date range / timeframe.")
 
         result = BacktestRunner().run(
             strategy,
             bars,
+            htf_bars=htf_bars,
             initial_balance=float(run.initial_balance),
             spread_pct=float(run.spread_pct),
             commission=float(run.commission),
@@ -41,6 +46,8 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
 
         run.metrics = result.metrics
         run.metrics["intrabar_rule"] = result.intrabar_rule
+        if run.htf_timeframe:
+            run.metrics["htf_timeframe"] = run.htf_timeframe
         run.equity_curve = result.equity_curve
         run.trades = [_trade_to_dict(t) for t in result.trades]
         run.status = BacktestRun.Status.COMPLETED

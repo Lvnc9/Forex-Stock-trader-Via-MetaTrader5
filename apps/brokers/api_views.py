@@ -97,6 +97,7 @@ def deployments(request):
                 "catalog_slug": dep.catalog_slug,
                 "mt5_symbol": dep.mt5_symbol,
                 "timeframe": dep.timeframe,
+                "htf_timeframe": dep.htf_timeframe or "",
                 "lot_size": dep.lot_size,
             }
         )

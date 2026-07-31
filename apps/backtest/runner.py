@@ -6,8 +6,7 @@ import pandas as pd
 
 from apps.backtest.constants import INTRABAR_RULE
 from apps.strategies.base import BaseStrategy
-from apps.strategies.context import BarContext
-from apps.strategies.indicators.registry import IndicatorRegistry
+from apps.strategies.engine import SignalEngine
 from apps.strategies.signals import Signal, SignalAction
 
 
@@ -41,11 +40,17 @@ class _Position:
 
 
 class BacktestRunner:
+    """Applies SignalEngine events with intrabar SL/TP and equity tracking."""
+
+    def __init__(self, engine: SignalEngine | None = None) -> None:
+        self.engine = engine or SignalEngine()
+
     def run(
         self,
         strategy: BaseStrategy,
         bars: pd.DataFrame,
         *,
+        htf_bars: pd.DataFrame | None = None,
         initial_balance: float = 10_000.0,
         spread_pct: float = 0.0,
         commission: float = 0.0,
@@ -54,7 +59,10 @@ class BacktestRunner:
         if bars.empty:
             return BacktestResult(metrics=self._empty_metrics(initial_balance))
 
-        min_bars = warmup if warmup is not None else self._warmup_bars(strategy)
+        min_bars = warmup if warmup is not None else SignalEngine._warmup_bars(strategy)
+        events = self.engine.run(strategy, bars, htf_bars=htf_bars, warmup=min_bars)
+        signals_by_bar = {event.bar_index: event.signal for event in events}
+
         cash = float(initial_balance)
         position: _Position | None = None
         trades: list[TradeRecord] = []
@@ -63,24 +71,17 @@ class BacktestRunner:
         for i in range(len(bars)):
             bar = bars.iloc[i]
             ts = bars.index[i]
+            ready = i + 1 >= min_bars
 
-            if i >= min_bars and position is not None:
+            if ready and position is not None:
                 exit_price, reason = self._check_intrabar_exit(position, bar)
                 if exit_price is not None and reason is not None:
                     cash, position = self._close_position(
                         position, exit_price, ts, reason, commission, cash, trades
                     )
 
-            if i >= min_bars:
-                window = bars.iloc[: i + 1]
-                ctx = BarContext(
-                    bar_index=i,
-                    timestamp=ts,
-                    bars=window,
-                    parameters=strategy.parameters,
-                    indicators=IndicatorRegistry(window),
-                )
-                signal = strategy.on_bar(ctx)
+            if ready:
+                signal = signals_by_bar.get(i)
                 if signal is not None:
                     cash, position = self._apply_signal(
                         signal, position, bar, ts, spread_pct, commission, cash, trades
@@ -244,14 +245,6 @@ class BacktestRunner:
         if position.side == "long":
             return (mark - position.entry_price) * position.units
         return (position.entry_price - mark) * position.units
-
-    @staticmethod
-    def _warmup_bars(strategy: BaseStrategy) -> int:
-        nums: list[int] = [2]
-        for spec in strategy.parameter_schema:
-            if spec.get("type") in ("int", "float"):
-                nums.append(int(spec.get("max", spec.get("default", 2))))
-        return max(nums) + 5
 
     @staticmethod
     def _empty_metrics(initial_balance: float) -> dict:

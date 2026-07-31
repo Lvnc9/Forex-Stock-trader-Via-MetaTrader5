@@ -46,7 +46,7 @@
               </a>
             </td>
             <td class="px-4 py-3 font-mono text-xs text-zinc-300">{{ run.catalog_slug }}</td>
-            <td class="px-4 py-3 text-zinc-400">{{ run.timeframe }}</td>
+            <td class="px-4 py-3 text-zinc-400">{{ run.timeframe }}{% if run.htf_timeframe %}<span class="text-zinc-600">/{{ run.htf_timeframe }}</span>{% endif %}</td>
             <td class="px-4 py-3">
               {% if run.status == "completed" %}
                 <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">Completed</span>
