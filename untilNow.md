@@ -8,7 +8,8 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Branch** | `main` (PRs **#1–#5** merged) |
+| **Branch** | `cursor/smoke-library-sltp-live-864d` → merge to `main` |
+| **Main tip** | PRs **#1–#5** already merged |
 
 ## Done until now
 
@@ -19,24 +20,25 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | Phase 3 — MT5 agent, live worker, broker API | **Done** |
 | Phase 4 — FX/stock downloads | **Done** |
 | Polish slices 0–7 | **Done** |
-| **C** — HTF bars + SignalEngine/BacktestRunner unify | **Done** (merged via #4) |
-| **A/B** — Rules engine + builder UI | **Done** (merged via #4) |
-| **D** — Builder pct_offset/arith + HTF indicator source | **Done** (merged via #4) |
-| **E** — HTF form gate, `seed_rule_templates`, smoke path | **Done** (merged #4) |
-| **Library SL/TP knobs** | **Done** (merged #5) |
+| Phases **A–E** (rules, builder, HTF, seed) | **Done** (on `main`) |
+| **Library SL/TP knobs** | **Done** (on `main`) |
+| **Automated smoke (HTF + library SL/TP → LiveWorker)** | **Done** (this branch) |
 
-## Merged this session (ops)
+## This session — smoke path (no Windows MT5 in CI)
 
-| PR | What |
-| -- | ---- |
-| **#4** | Phases C→E (superseded #1–#3 content) fast-forwarded to `main` |
-| **#5** | Optional `stop_loss_pct` / `take_profit_pct` on library strategies |
+| Item | What |
+| ---- | ---- |
+| LiveWorker SL/TP | `test_live_worker_sl_tp_smoke` — adapter receives `stop_loss` / `take_profit` |
+| Docs | `agent/README.md` — library SL/TP Windows smoke steps + offline test command |
+| Suite | Full `python manage.py test` green |
+
+Real demo-terminal confirmation still needs a human on Windows (steps in `agent/README.md`).
 
 ## Left to do (optional)
 
 | Item | Notes |
 | ---- | ----- |
-| **Windows MT5 smoke** | Seed templates → backtest M5/H1 → deploy; try library strategies with non-zero SL/TP pcts |
+| **Human Windows MT5 smoke** | Follow both smoke sections in `agent/README.md` on a demo account |
 | Hedge / multi-position MT5 | Not supported (v1 is netting-style flip) |
 | Deeper nested exprs | Builder supports one-level pct_offset/arith only |
 | Huge CSV / Parquet cache | Still a known risk for very large M1 sets |
@@ -53,13 +55,11 @@ python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
-## Last commit on main
+## Last commit
 
-- `cdc0fd2` — docs: clear merged PR backlog from PLAN status
-- `2b78a28` — docs: record PRs #1–#5 merged on main
-- Feature tip: `54007e2` — Add optional SL/TP pct params to library strategies
+- (this branch) LiveWorker library SL/TP smoke + agent README steps
 
 ## Recommended next work
 
-- On Windows: smoke-test HTF rule strategies and library SL/TP pct params against demo MT5.
+- On a Windows host with demo MT5: run both smoke sections in `agent/README.md`.
 - Do **not** start hedge-mode, Parquet cache, or deeper nested expression UI unless explicitly requested.

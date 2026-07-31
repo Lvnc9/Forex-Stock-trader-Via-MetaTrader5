@@ -96,3 +96,17 @@ Unload: `nssm stop TradeBotAgent` then `nssm remove TradeBotAgent confirm`.
 5. Confirm agent report shows `htf_timeframe` and processes new bars (`/live/`).
 
 Without MT5, the pure-Python LiveWorker tests cover HTF bar fetch + `RuleStrategy` evaluation.
+
+## Smoke-test: library strategy SL/TP
+
+1. On the web host: `python manage.py seed_library_strategies`
+2. Strategies → **MA crossover** (or RSI / Range breakout) → set `stop_loss_pct` / `take_profit_pct` > 0 (e.g. `1.0` / `2.0`).
+3. Backtest on any instrument/timeframe; confirm exits show `stop_loss` / `take_profit` reasons when levels are hit.
+4. Deploy the same parameters to the Windows agent (demo).
+5. On the first entry order, confirm MT5 position has SL/TP filled (or check agent logs / `/live/` order payload).
+
+Without MT5, run:
+
+```bash
+python manage.py test apps.strategies.tests.test_library_sl_tp apps.strategies.tests.test_live_worker_sl_tp_smoke
+```
