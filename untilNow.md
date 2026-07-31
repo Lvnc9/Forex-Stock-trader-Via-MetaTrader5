@@ -57,7 +57,7 @@ python manage.py runserver
 
 ## Last commit
 
-- (this branch) LiveWorker library SL/TP smoke + agent README steps
+- `fc05b20` — Add LiveWorker library SL/TP smoke path and docs
 
 ## Recommended next work
 
