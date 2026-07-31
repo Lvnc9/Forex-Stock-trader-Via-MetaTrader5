@@ -60,7 +60,7 @@ python manage.py runserver
 
 ## Last commit
 
-- (this branch) Library strategies emit optional SL/TP from pct params
+- `54007e2` — Add optional SL/TP pct params to library strategies
 
 ## Recommended next work
 
