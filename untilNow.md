@@ -46,7 +46,7 @@ python manage.py runserver
 
 ## Last commit
 
-- Phase D: builder pct_offset/arith + HTF indicator source
+- `a961a86` — Phase D: builder pct_offset/arith and HTF indicator source
 
 ## Recommended next work
 
