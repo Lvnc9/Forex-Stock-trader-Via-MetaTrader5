@@ -57,7 +57,7 @@ Agent (Windows): see [agent/README.md](./agent/README.md).
 
 ## Last commit
 
-- Phase C: HTF bars + SignalEngine/BacktestRunner unification (this branch)
+- `33c03fe` — Phase C: HTF bars + SignalEngine/BacktestRunner unification
 
 ## Recommended next work
 
