@@ -86,8 +86,9 @@ class SignalEngine:
 
     @staticmethod
     def _warmup_bars(strategy: BaseStrategy) -> int:
+        # Only int params (periods / lookbacks) inform warmup — not float levels/pcts.
         nums: list[int] = [2]
         for spec in strategy.parameter_schema:
-            if spec.get("type") in ("int", "float"):
+            if spec.get("type") == "int":
                 nums.append(int(spec.get("max", spec.get("default", 2))))
         return max(nums) + 5
