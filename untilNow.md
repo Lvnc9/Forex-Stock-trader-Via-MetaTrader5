@@ -8,8 +8,8 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **This branch** | `cursor/library-strategy-sl-tp-864d` (on Phase E) |
-| **Open PRs** | #1–#4 (C→E); prefer merge **#4** into `main` first (supersedes #1–#3) |
+| **This branch** | `cursor/library-strategy-sl-tp-864d` (on Phase E) — **PR #5** |
+| **Open PRs** | #1–#4 (C→E); prefer merge **#4** into `main` first, then **#5** (SL/TP) |
 
 ## Done until now
 
@@ -61,6 +61,7 @@ python manage.py runserver
 ## Last commit
 
 - `54007e2` — Add optional SL/TP pct params to library strategies
+- `dde7c89` — docs: record library SL/TP commit hash in untilNow
 
 ## Recommended next work
 
