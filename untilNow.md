@@ -55,7 +55,8 @@ python manage.py runserver
 
 ## Last commit on main
 
-- `2c83ea6` — docs: note PR #5 in untilNow handoff (tip before this ops note)
+- `cdc0fd2` — docs: clear merged PR backlog from PLAN status
+- `2b78a28` — docs: record PRs #1–#5 merged on main
 - Feature tip: `54007e2` — Add optional SL/TP pct params to library strategies
 
 ## Recommended next work
