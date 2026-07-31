@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open:** merge open PRs to `main`; Windows MT5 smoke for HTF rules; optional hardening (hedging accounts, library SL/TP knobs, deeper nested exprs, Parquet cache). Phases A–E implemented — see [untilNow.md](untilNow.md).
+**Still open:** Windows MT5 smoke for HTF rules + library SL/TP pcts; optional hardening (hedging accounts, deeper nested exprs, Parquet cache). Phases A–E + library SL/TP are on `main` — see [untilNow.md](untilNow.md).
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
