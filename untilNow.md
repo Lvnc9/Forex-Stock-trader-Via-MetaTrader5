@@ -8,6 +8,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
+| **Branch** | `cursor/phase-f-backtest-restructure-864d` |
 
 ## Done until now
 
@@ -18,73 +19,77 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | Phase 3 — MT5 agent, live worker, broker API | **Done** |
 | Phase 4 — FX/stock downloads | **Done** |
 | Polish A–E (rules, builder, HTF, seed) | **Done** |
-| **F — Backtest restructure** | **Done** (this session) |
+| **F — Backtest restructure** | **Done** |
+| **G1 — Live/backtest sizing parity** | **Done** |
+| **G2 — Multicore param sweeps** | **Done** |
+| **G3 — Parquet bar cache** | **Done** |
+| **G4 — Ops handoff docs** | **Done** (checklist only; smoke not executed here) |
 
-## Phase F (this session)
+## Phase G (this session)
 
 | Item | What |
 | ---- | ---- |
-| Modular engine | `data_handler`, `broker`, `portfolio`, `metrics`, `runner` facade |
-| Timeframe-aware | M1 source → resample primary/HTF; TF metadata on metrics; form help |
-| Data loading | Prefer `months/` over yearly; epoch-ms **or** ISO timestamps; date-filtered files |
-| Speed | Threaded CSV load; parallel primary+HTF resample; indicator series cache; equity downsample |
-| Cache | Pickle under `data/.cache/` (`TRADEBOT_BACKTEST_CACHE`); catalog slug LocMem cache |
-| UI / Celery | `progress_pct` + `/backtest/<id>/status/` JSON + HTMX progress bar; Celery soft limits |
+| G1 sizing | `SimulatedBroker` `all_in` / `fixed_lots`; `BacktestRun.lot_size` + `contract_size`; migration `0004` |
+| G2 sweeps | `apps/backtest/sweep.py` + `run_jobs_multiprocess`; UI `/backtest/sweep/`; `run_param_sweep` command; Celery `backtest.sweep` |
+| G3 cache | `loader.py` Parquet via `pyarrow`; legacy `.pkl` migrates once then deleted |
+| G4 docs | Expanded Windows demo smoke checklist in `agent/README.md` |
 
-## Left to do
+## Left to do (optional — not this pass)
 
 | Item | Notes |
 | ---- | ----- |
-| **Windows MT5 smoke** | Real agent demo: backtest → deploy (see `agent/README.md`) |
-| Lot-sized backtest | Still all-in cash sizing vs live `lot_size` |
-| Hedge / multi-position | Netting-style flip only |
+| **Windows MT5 demo smoke** | Follow `agent/README.md` checklist; record evidence before claiming pass |
+| Hedge / multi-position | Still netting-style flip only |
 | Tick-mode intrabar | Optional; SL-before-TP remains |
-| Commit Phase F + builder UX | User has not requested commit yet |
-
-## Strategy builder UX (this session)
-
-Rule builder no longer pre-renders spare slots. Each section (**parameters / indicators / rules**) starts with **1 row**; **+ Add** uses HTMX (`strategies:builder_row`) to append a row; **−** removes a row in the DOM. Ceilings remain `MAX_PARAMS=24` / `MAX_INDICATORS=16` / `MAX_RULES=12`. Schema/runtime still unbounded.
+| Walk-forward UI | Not started |
 
 ## Run
 
 ```bash
 cd tradeBot && source venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
+pip install -r requirements.txt   # includes pyarrow
+python manage.py migrate          # through backtest.0005_parameter_overrides
 python manage.py seed_library_strategies
 python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
-**Faster / non-blocking backtests (recommended for large M1 sets):**
+**Faster / non-blocking backtests:**
 
 ```bash
 export CELERY_TASK_ALWAYS_EAGER=False
 export TRADEBOT_BACKTEST_LOAD_WORKERS=8
-redis-server   # separate terminal
+redis-server
 celery -A config worker -l info --concurrency=4
 python manage.py runserver
 ```
 
-Login is at `/login/`. After pull, always `migrate` (includes `backtest.0003_backtestrun_progress`).
+**Param sweep (CLI):**
+
+```bash
+python manage.py run_param_sweep \
+  --strategy <slug> --catalog <slug> \
+  --start YYYY-MM-DD --end YYYY-MM-DD \
+  --param fast_period --values 5,10,15 --sync
+```
+
+Login is at `/login/`.
 
 ## Tests run
 
 ```bash
-python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog apps.strategies.tests.test_phase_c_htf
-# 25 OK
+python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog
+# 20 OK (this session)
 ```
 
-## Last commit
+## Last commits (this branch tip)
 
-- `aeae101` — docs: record Phase F commit hash in untilNow
-- `4a6f7a0` — Raise rule-builder UI ceilings with dynamic spare slots.
-- `53a0dab` — Add HTMX +/− rows to rule builder starting from one slot.
-- `4cfb90d` — Phase F: modular backtest engine with TF-aware load, cache, and progress.
-
+- `82b8f25` — G3: Parquet bar cache via pyarrow
+- `d8419ea` — G2: multiprocess parameter sweeps
+- `3fcab11` — G1: fixed-lots sizing parity
+- `4cfb90d` — Phase F: modular backtest engine (earlier on branch)
 
 ## Recommended next work
 
-- Commit Phase F when ready.
-- On Windows: MT5 demo smoke with HTF rules + library SL/TP.
-- Optional: lot/risk sizing in `SimulatedBroker` to match live deployments.
+1. On Windows: run the **MT5 demo smoke** in `agent/README.md` and paste evidence into the next handoff.
+2. Only then optional product work: hedge/multi-position, tick-mode intrabar, or walk-forward UI.

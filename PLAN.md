@@ -38,7 +38,7 @@ isProject: false
 
 ## Current state (2026-08-01)
 
-**Phases 1–4 + polish A–E** are implemented. **Phase F — backtest restructure** landed in this workspace (modular engine, M1→TF awareness, parallel load + disk cache, Celery progress). Session handoff: [untilNow.md](untilNow.md). GitHub: [Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5).
+**Phases 1–4 + polish A–E + Phase F (backtest restructure) + Phase G (G1–G4)** are implemented on branch `cursor/phase-f-backtest-restructure-864d`. Session handoff: [untilNow.md](untilNow.md). GitHub: [Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5).
 
 | Layer | Location | Notes |
 | ----- | -------- | ----- |
@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open:** Windows MT5 demo smoke; optional hedge/multi-position; deeper nested exprs; tick-mode intrabar; lot-sized backtest parity with live.
+**Still open (optional):** Windows MT5 demo smoke (checklist in [agent/README.md](agent/README.md) — do not claim pass without evidence); hedge/multi-position; tick-mode intrabar; walk-forward UI.
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
@@ -424,8 +424,10 @@ App `backtest` (event-driven, shared signals with live):
 - **BacktestRun** model: strategy FK, catalog slug, primary TF + optional HTF, date range, fees/spread, status, **progress_pct / progress_message**, metrics JSON, equity/trades JSON.
 - **Modular sim:** `BacktestDataHandler` → `SignalEngine` → `Portfolio` + `SimulatedBroker` → `metrics` (see `apps/backtest/`).
 - **Timeframes:** disk data is always **M1**; runner resamples to M5–D1 (+ optional coarser HTF). Metrics include TF metadata (`primary_minutes`, bar counts, etc.).
-- **Data path:** prefer `months/` shards over yearly duplicates; parse epoch-ms **or** ISO timestamps; date-filtered file selection; parallel CSV reads; pickle cache under `data/.cache/`.
+- **Data path:** prefer `months/` shards over yearly duplicates; parse epoch-ms **or** ISO timestamps; date-filtered file selection; parallel CSV reads; **Parquet** cache under `data/.cache/` (`pyarrow`; legacy `.pkl` migrates once).
 - **Speed / UI:** indicator series cache in `SignalEngine`; Celery task + `/backtest/<id>/status/` JSON + HTMX progress bar; equity curve downsampled for storage.
+- **Sizing:** `all_in` (cash ÷ price) or `fixed_lots` (`lot_size` × `contract_size`, aligned with live `Deployment.lot_size`).
+- **Sweeps:** independent param runs via `parallel.run_jobs_multiprocess` (`/backtest/sweep/`, `run_param_sweep`); single-run bar loop stays sequential.
 - **Intrabar rule:** SL before TP if both hit the same bar (`INTRABAR_RULE`).
 - **Primary metric:** win rate %; also net return %, profit factor, max drawdown, trade count, equity curve.
 
@@ -541,6 +543,10 @@ Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in
 | Builder expr + HTF inds | `rules/builder.py`, templates | pct_offset/arith in UI; indicator `source: htf` | **done (Phase D)** |
 | HTF gate + seed templates | forms, `seed_rule_templates`, agent docs | Require HTF when needed; seed + smoke path | **done (Phase E)** |
 | Backtest restructure | `apps/backtest/`, `apps/marketdata/loader.py` | Modular engine, TF metadata, parallel load, disk cache, progress API | **done (Phase F)** |
+| Sizing parity | `SimulatedBroker`, `BacktestRun` | `all_in` / `fixed_lots` + contract size | **done (G1)** |
+| Param sweeps | `sweep.py`, `parallel.py` | Multiprocess independent jobs; UI + management command | **done (G2)** |
+| Parquet cache | `marketdata/loader.py` | Replace pickle; pyarrow; legacy `.pkl` migrate | **done (G3)** |
+| Ops smoke docs | `agent/README.md` | Windows demo checklist (evidence required) | **done (G4)** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
@@ -554,7 +560,7 @@ Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 | MT5 Python only works with local terminal | **Agent on Windows** next to MT5; web app never imports MetaTrader5 |
 | Home PC behind NAT                        | Agent uses **outbound HTTPS only**; no inbound firewall             |
 | Broker symbol names ≠ catalog ids         | Symbol map UI + validation before deploy                            |
-| Huge M1 CSV memory                        | Prefer months-only; date-filtered files; `data/.cache/` pickle; parallel load workers |
+| Huge M1 CSV memory                        | Prefer months-only; date-filtered files; `data/.cache/` Parquet; parallel load workers |
 | Intrabar SL/TP ambiguity                  | Fixed documented rule; optional “tick mode” later                   |
 
 
