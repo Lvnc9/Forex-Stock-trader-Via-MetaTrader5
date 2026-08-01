@@ -1,0 +1,13 @@
+<div class="builder-row param-row grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]" data-index="{{ row.index }}">
+  <div><label class="tb-label">Name</label>{{ row.name }}</div>
+  <div><label class="tb-label">Type</label>{{ row.type }}</div>
+  <div><label class="tb-label">Default</label>{{ row.default }}</div>
+  <div><label class="tb-label">Min</label>{{ row.min }}</div>
+  <div><label class="tb-label">Max</label>{{ row.max }}</div>
+  <div class="flex items-end pb-0.5">
+    <button type="button"
+            class="rounded border border-zinc-700 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            title="Remove row"
+            onclick="this.closest('.builder-row').remove()">−</button>
+  </div>
+</div>

@@ -1,4 +1,8 @@
-"""Validate and normalize rule strategy specs."""
+"""Validate and normalize rule strategy specs.
+
+``parameters``, ``indicators``, and rule-group ``rules`` are unbounded lists.
+Length caps live only in the HTML builder UI (``rules.builder.MAX_*``).
+"""
 
 from __future__ import annotations
 

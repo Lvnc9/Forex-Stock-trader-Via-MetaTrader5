@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
@@ -12,7 +13,18 @@ from apps.strategies.forms_builder import build_parameter_form_class
 from apps.strategies.loader import load_strategy_class
 from apps.strategies.models import Strategy
 from apps.strategies.registry import LIBRARY_BY_SLUG, LIBRARY_STRATEGIES
-from apps.strategies.rules.builder import RuleBuilderForm, initial_from_spec
+from apps.strategies.rules.builder import (
+    MAX_INDICATORS,
+    MAX_PARAMS,
+    MAX_RULES,
+    RULE_GROUPS,
+    RuleBuilderForm,
+    indicator_row_context,
+    initial_from_spec,
+    param_row_context,
+    resolve_builder_slots,
+    rule_row_context,
+)
 from apps.strategies.rules.expr import ExprError
 from apps.strategies.rules.runtime import RuleStrategy
 from apps.strategies.rules.templates import get_template, list_templates
@@ -214,9 +226,23 @@ class LibrarySeedVariantView(View):
                 "description": cls.description,
                 "module_path": cls.module_path,
                 "parameters": dict(cls.default_parameters),
+                "rule_spec": {},
                 "is_library": True,
             },
         )
+        if not created and (
+            strategy.module_path != cls.module_path
+            or strategy.rule_spec
+            or not strategy.is_library
+        ):
+            strategy.module_path = cls.module_path
+            strategy.rule_spec = {}
+            strategy.is_library = True
+            if not strategy.parameters:
+                strategy.parameters = dict(cls.default_parameters)
+            strategy.save(
+                update_fields=["module_path", "rule_spec", "is_library", "parameters", "updated_at"]
+            )
         return redirect("strategies:parameters", pk=strategy.pk)
 
 
@@ -226,16 +252,22 @@ class RuleStrategyBuilderView(View):
 
     def get(self, request, pk=None):
         strategy = get_object_or_404(Strategy, pk=pk) if pk else None
+        if strategy is not None and not strategy.is_rule_strategy:
+            messages.error(request, "That strategy is not a rule strategy.")
+            return redirect("strategies:parameters", pk=strategy.pk)
+
         from_slug = request.GET.get("from") or ""
         initial = {"name": "", "description": ""}
         template_meta = None
 
+        spec_for_slots = None
         if strategy and strategy.rule_spec:
             initial = initial_from_spec(
                 strategy.rule_spec,
                 name=strategy.name,
                 description=strategy.description,
             )
+            spec_for_slots = strategy.rule_spec
         elif from_slug:
             template_meta = get_template(from_slug)
             if template_meta:
@@ -244,10 +276,17 @@ class RuleStrategyBuilderView(View):
                     name=template_meta["name"],
                     description=template_meta["description"],
                 )
+                spec_for_slots = template_meta["spec"]
             else:
                 messages.error(request, f"Unknown rule template: {from_slug}")
 
-        form = RuleBuilderForm(initial=initial)
+        n_params, n_indicators, n_rules = resolve_builder_slots(spec=spec_for_slots)
+        form = RuleBuilderForm(
+            initial=initial,
+            n_params=n_params,
+            n_indicators=n_indicators,
+            n_rules=n_rules,
+        )
         return render(
             request,
             self.template_name,
@@ -256,7 +295,17 @@ class RuleStrategyBuilderView(View):
 
     def post(self, request, pk=None):
         strategy = get_object_or_404(Strategy, pk=pk) if pk else None
-        form = RuleBuilderForm(request.POST)
+        if strategy is not None and not strategy.is_rule_strategy:
+            messages.error(request, "That strategy is not a rule strategy.")
+            return redirect("strategies:parameters", pk=strategy.pk)
+
+        n_params, n_indicators, n_rules = resolve_builder_slots(data=request.POST)
+        form = RuleBuilderForm(
+            request.POST,
+            n_params=n_params,
+            n_indicators=n_indicators,
+            n_rules=n_rules,
+        )
         context = self._context(form, strategy)
         if not form.is_valid():
             return render(request, self.template_name, context)
@@ -329,47 +378,23 @@ class RuleStrategyBuilderView(View):
 
     @classmethod
     def _context(cls, form, strategy, template_meta=None):
-        param_rows = []
-        for i in range(4):
-            param_rows.append(
-                {
-                    "name": form[f"param_{i}_name"],
-                    "type": form[f"param_{i}_type"],
-                    "default": form[f"param_{i}_default"],
-                    "min": form[f"param_{i}_min"],
-                    "max": form[f"param_{i}_max"],
-                }
-            )
-        ind_rows = []
-        for i in range(6):
-            ind_rows.append(
-                {
-                    "id": form[f"ind_{i}_id"],
-                    "fn": form[f"ind_{i}_fn"],
-                    "source": form[f"ind_{i}_source"],
-                    "period": form[f"ind_{i}_period"],
-                    "period_param": form[f"ind_{i}_period_param"],
-                    "column": form[f"ind_{i}_column"],
-                }
-            )
+        param_rows = [param_row_context(form, i) for i in range(form.n_params)]
+        ind_rows = [indicator_row_context(form, i) for i in range(form.n_indicators)]
+        labels = {
+            "entry_long": "Entry long",
+            "entry_short": "Entry short",
+            "exit_long": "Exit long",
+            "exit_short": "Exit short",
+        }
         group_rows = []
-        for key, label in (
-            ("entry_long", "Entry long"),
-            ("entry_short", "Entry short"),
-            ("exit_long", "Exit long"),
-            ("exit_short", "Exit short"),
-        ):
-            rules = []
-            for i in range(4):
-                prefix = f"{key}_{i}"
-                rules.append(
-                    {
-                        "op": form[f"{prefix}_op"],
-                        "left": cls._expr_side(form, f"{prefix}_left"),
-                        "right": cls._expr_side(form, f"{prefix}_right"),
-                    }
-                )
-            group_rows.append({"key": key, "label": label, "logic": form[f"{key}_logic"], "rules": rules})
+        for key in RULE_GROUPS:
+            rules = [
+                rule_row_context(form, key, i, cls._expr_side)
+                for i in range(form.n_rules_map[key])
+            ]
+            group_rows.append(
+                {"key": key, "label": labels[key], "logic": form[f"{key}_logic"], "rules": rules}
+            )
 
         return {
             "form": form,
@@ -378,4 +403,53 @@ class RuleStrategyBuilderView(View):
             "ind_rows": ind_rows,
             "group_rows": group_rows,
             "template_meta": template_meta,
+            "max_params": MAX_PARAMS,
+            "max_indicators": MAX_INDICATORS,
+            "max_rules": MAX_RULES,
         }
+
+
+@method_decorator(login_required, name="dispatch")
+class RuleBuilderRowView(View):
+    """HTMX: return one empty builder row at the given index."""
+
+    def get(self, request, kind: str):
+        try:
+            index = int(request.GET.get("index", "0"))
+        except ValueError:
+            index = 0
+        if index < 0:
+            index = 0
+
+        if kind == "param":
+            if index >= MAX_PARAMS:
+                return HttpResponse(status=204)
+            form = RuleBuilderForm.single_param_row(index)
+            return render(
+                request,
+                "strategies/_param_row.html",
+                {"row": param_row_context(form, index)},
+            )
+
+        if kind == "indicator":
+            if index >= MAX_INDICATORS:
+                return HttpResponse(status=204)
+            form = RuleBuilderForm.single_indicator_row(index)
+            return render(
+                request,
+                "strategies/_indicator_row.html",
+                {"row": indicator_row_context(form, index)},
+            )
+
+        if kind == "rule":
+            group = request.GET.get("group") or ""
+            if group not in RULE_GROUPS or index >= MAX_RULES:
+                return HttpResponse(status=204)
+            form = RuleBuilderForm.single_rule_row(group, index)
+            return render(
+                request,
+                "strategies/_rule_row.html",
+                {"row": rule_row_context(form, group, index, RuleStrategyBuilderView._expr_side)},
+            )
+
+        return HttpResponse(status=404)

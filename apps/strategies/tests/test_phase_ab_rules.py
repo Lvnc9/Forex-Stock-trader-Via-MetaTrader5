@@ -105,6 +105,69 @@ class RuleBuilderFormTests(SimpleTestCase):
         self.assertEqual(len(spec["indicators"]), 2)
         dry_run_rule_spec(spec)
 
+    def test_more_than_four_parameters(self):
+        """Former UI cap was 4; schema/runtime never had that limit."""
+        data = {"name": "Many params", "description": ""}
+        for i in range(6):
+            data[f"param_{i}_name"] = f"p{i}"
+            data[f"param_{i}_type"] = "float"
+            data[f"param_{i}_default"] = str(i)
+        data.update(
+            {
+                "ind_0_id": "sma1",
+                "ind_0_fn": "sma",
+                "ind_0_period": "10",
+                "ind_0_column": "close",
+                "entry_long_logic": "and",
+                "entry_long_0_op": ">",
+                "entry_long_0_left_ref": "indicator",
+                "entry_long_0_left_indicator": "sma1",
+                "entry_long_0_right_ref": "value",
+                "entry_long_0_right_value": "0",
+                "entry_short_logic": "and",
+                "exit_long_logic": "and",
+                "exit_short_logic": "and",
+                "stop_type": "",
+                "tp_type": "",
+            }
+        )
+        form = RuleBuilderForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.n_params, 6)
+        spec = form.build_spec()
+        self.assertEqual(len(spec["parameters"]), 6)
+        dry_run_rule_spec(spec)
+
+    def test_starts_with_one_row(self):
+        form = RuleBuilderForm()
+        self.assertEqual(form.n_params, 1)
+        self.assertEqual(form.n_indicators, 1)
+        self.assertEqual(form.n_rules_map["entry_long"], 1)
+
+    def test_schema_accepts_many_parameters_without_builder(self):
+        spec = {
+            "version": 1,
+            "parameters": [{"name": f"p{i}", "type": "float", "default": i} for i in range(10)],
+            "indicators": [{"id": "r", "fn": "rsi", "source": "primary", "args": {"period": 14}}],
+            "entry_long": {
+                "logic": "and",
+                "rules": [
+                    {
+                        "op": "<",
+                        "left": {"ref": "indicator", "id": "r"},
+                        "right": {"ref": "param", "name": "p9"},
+                    }
+                ],
+            },
+            "entry_short": {"logic": "and", "rules": []},
+            "exit_long": {"logic": "and", "rules": []},
+            "exit_short": {"logic": "and", "rules": []},
+        }
+        cleaned = validate_spec(spec)
+        self.assertEqual(len(cleaned["parameters"]), 10)
+        strategy = RuleStrategy({RULE_SPEC_KEY: cleaned, "p9": 40})
+        self.assertEqual(len(strategy.parameter_schema), 10)
+
 
 class RuleStrategyUiTests(TestCase):
     def setUp(self):
@@ -199,6 +262,19 @@ class RuleStrategyUiTests(TestCase):
         resp = self.client.post(reverse("strategies:rule_create"), data)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Unknown indicator")
+
+    def test_htmx_add_param_row(self):
+        resp = self.client.get(reverse("strategies:builder_row", kwargs={"kind": "param"}), {"index": 1})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "param_1_name")
+        self.assertContains(resp, 'data-index="1"')
+
+    def test_new_builder_starts_with_one_param_row(self):
+        resp = self.client.get(reverse("strategies:rule_create"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "param_0_name")
+        self.assertContains(resp, "+ Add parameter")
+        self.assertNotContains(resp, "param_1_name")
 
 
 class CustomPythonLifecycleTests(TestCase):
