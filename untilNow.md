@@ -77,8 +77,11 @@ python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog ap
 
 ## Last commit
 
-- `4cfb90d` — Phase F: modular backtest engine with TF-aware load, cache, and progress
-- (tip) rule-builder UI ceilings / dynamic spare slots (same branch)
+- `aeae101` — docs: record Phase F commit hash in untilNow
+- `4a6f7a0` — Raise rule-builder UI ceilings with dynamic spare slots.
+- `53a0dab` — Add HTMX +/− rows to rule builder starting from one slot.
+- `4cfb90d` — Phase F: modular backtest engine with TF-aware load, cache, and progress.
+
 
 ## Recommended next work
 
