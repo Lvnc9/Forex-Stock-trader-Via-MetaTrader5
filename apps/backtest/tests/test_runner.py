@@ -147,6 +147,32 @@ class TimestampParseTests(SimpleTestCase):
         self.assertLess(len(m5), len(m1))
 
 
+class SweepHelperTests(SimpleTestCase):
+    def test_parse_param_values(self):
+        from apps.backtest.sweep import MAX_SWEEP_JOBS, build_override_dicts, parse_param_values
+
+        self.assertEqual(parse_param_values("5, 10, 15"), [5, 10, 15])
+        self.assertEqual(parse_param_values("0.01,0.02"), [0.01, 0.02])
+        overrides = build_override_dicts("fast_period", [5, 10])
+        self.assertEqual(overrides, [{"fast_period": 5}, {"fast_period": 10}])
+        with self.assertRaises(ValueError):
+            parse_param_values(",".join(str(i) for i in range(MAX_SWEEP_JOBS + 1)))
+
+    def test_run_jobs_multiprocess_sequential(self):
+        from apps.backtest.parallel import run_jobs_multiprocess
+
+        results = run_jobs_multiprocess(
+            [{"n": 1}, {"n": 2}, {"n": 3}],
+            "apps.backtest.tests.test_runner:_sweep_job_double",
+            max_workers=1,
+        )
+        self.assertEqual(results, [2, 4, 6])
+
+
+def _sweep_job_double(job: dict) -> int:
+    return int(job["n"]) * 2
+
+
 class MetricsHelperTests(SimpleTestCase):
     def test_downsample_equity(self):
         curve = [{"t": str(i), "equity": float(i)} for i in range(1000)]

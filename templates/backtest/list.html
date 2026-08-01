@@ -5,12 +5,20 @@
 {% block content %}
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
   <p class="text-sm text-zinc-400">Run library strategies on local M1 CSV data. Results include win rate and equity curve.</p>
-  <a
-    href="{% url 'backtest:create' %}"
-    class="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400"
-  >
-    New backtest
-  </a>
+  <div class="flex flex-wrap items-center gap-2">
+    <a
+      href="{% url 'backtest:sweep' %}"
+      class="inline-flex items-center rounded-lg border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+    >
+      Param sweep
+    </a>
+    <a
+      href="{% url 'backtest:create' %}"
+      class="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400"
+    >
+      New backtest
+    </a>
+  </div>
 </div>
 
 {% if runs %}

@@ -10,9 +10,9 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
-from apps.backtest.forms import BacktestRunForm
+from apps.backtest.forms import BacktestRunForm, ParamSweepForm
 from apps.backtest.models import BacktestRun
-from apps.backtest.tasks import enqueue_backtest
+from apps.backtest.tasks import enqueue_backtest, enqueue_sweep
 
 
 @method_decorator(login_required, name="dispatch")
@@ -43,6 +43,54 @@ class BacktestCreateView(CreateView):
         self.object.save()
         enqueue_backtest(self.object)
         return redirect("backtest:detail", pk=self.object.pk)
+
+
+@method_decorator(login_required, name="dispatch")
+class BacktestSweepCreateView(CreateView):
+    """Enqueue a small parameter sweep; each value becomes an independent BacktestRun."""
+
+    model = BacktestRun
+    form_class = ParamSweepForm
+    template_name = "backtest/sweep_form.html"
+    success_url = reverse_lazy("backtest:list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["data_root"] = settings.TRADEBOT_DATA_ROOT
+        return kwargs
+
+    def form_valid(self, form):
+        overrides_list = form.cleaned_data["override_dicts"]
+        base = form.save(commit=False)
+        runs: list[BacktestRun] = []
+        for overrides in overrides_list:
+            run = BacktestRun(
+                strategy=base.strategy,
+                catalog_slug=base.catalog_slug,
+                timeframe=base.timeframe,
+                htf_timeframe=base.htf_timeframe or "",
+                start=base.start,
+                end=base.end,
+                initial_balance=base.initial_balance,
+                spread_pct=base.spread_pct,
+                commission=base.commission,
+                sizing_mode=base.sizing_mode,
+                lot_size=base.lot_size,
+                contract_size=base.contract_size,
+                parameter_overrides=overrides,
+                status=BacktestRun.Status.PENDING,
+                progress_pct=0.0,
+                progress_message="Queued (sweep)",
+            )
+            run.save()
+            runs.append(run)
+        enqueue_sweep(runs)
+        messages.success(
+            self.request,
+            f"Queued {len(runs)}-run parameter sweep "
+            f"({form.cleaned_data['param_name']}={form.cleaned_data['parsed_values']}).",
+        )
+        return redirect("backtest:list")
 
 
 @method_decorator(login_required, name="dispatch")

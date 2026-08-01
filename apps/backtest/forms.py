@@ -2,6 +2,7 @@ from django import forms
 from django.core.cache import cache
 
 from apps.backtest.models import BacktestRun
+from apps.backtest.sweep import MAX_SWEEP_JOBS, parse_param_values
 from apps.marketdata.catalog import scan_data_root
 from apps.marketdata.timeframes import (
     HTF_TIMEFRAME_CHOICES,
@@ -135,3 +136,37 @@ class BacktestRunForm(forms.ModelForm):
         elif contract_size is not None and float(contract_size) <= 0:
             self.add_error("contract_size", "Contract size must be positive.")
         return cleaned
+
+
+class ParamSweepForm(BacktestRunForm):
+    """Create a small independent-run grid (one parameter × values)."""
+
+    param_name = forms.CharField(
+        max_length=64,
+        label="Parameter to sweep",
+        help_text="Strategy parameter key (e.g. fast_period).",
+        widget=forms.TextInput(attrs={"class": "tb-input", "placeholder": "fast_period"}),
+    )
+    param_values = forms.CharField(
+        label="Values (comma-separated)",
+        help_text=f"Up to {MAX_SWEEP_JOBS} values, e.g. 5,10,15,20.",
+        widget=forms.TextInput(attrs={"class": "tb-input", "placeholder": "5,10,15"}),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        name = (cleaned.get("param_name") or "").strip()
+        raw_values = cleaned.get("param_values") or ""
+        cleaned["param_name"] = name
+        if not name:
+            self.add_error("param_name", "Required.")
+            return cleaned
+        try:
+            values = parse_param_values(raw_values)
+        except ValueError as exc:
+            self.add_error("param_values", str(exc))
+            return cleaned
+        cleaned["parsed_values"] = values
+        cleaned["override_dicts"] = [{name: v} for v in values]
+        return cleaned
+

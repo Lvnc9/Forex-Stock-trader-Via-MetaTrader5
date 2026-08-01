@@ -20,6 +20,9 @@
     {% else %}
       all-in (cash ÷ price)
     {% endif %}
+    {% if run.parameter_overrides %}
+      · overrides {{ run.parameter_overrides }}
+    {% endif %}
   </p>
   {% if metrics.primary_label %}
     <p class="mt-1 text-xs text-zinc-600">

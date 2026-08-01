@@ -54,6 +54,11 @@ class BacktestRun(models.Model):
         default=DEFAULT_CONTRACT_SIZE,
         help_text="Units per 1.0 lot (100000 for standard FX; adjust for CFDs/indices).",
     )
+    parameter_overrides = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Merged over strategy.runtime_parameters() for this run (param sweeps).",
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     progress_pct = models.FloatField(default=0.0, help_text="0–100 while running.")
     progress_message = models.CharField(max_length=240, blank=True, default="")

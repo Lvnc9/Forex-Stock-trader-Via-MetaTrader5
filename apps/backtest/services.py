@@ -17,7 +17,11 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
     mark_running(run)
 
     try:
-        strategy = instantiate_strategy(run.strategy.module_path, run.strategy.runtime_parameters())
+        params = run.strategy.runtime_parameters()
+        overrides = dict(run.parameter_overrides or {})
+        if overrides:
+            params.update(overrides)
+        strategy = instantiate_strategy(run.strategy.module_path, params)
         start_dt = timezone.make_aware(datetime.combine(run.start, time.min))
         end_dt = timezone.make_aware(datetime.combine(run.end, time.max))
 
@@ -66,6 +70,8 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
         run.metrics["intrabar_rule"] = result.intrabar_rule
         if run.htf_timeframe:
             run.metrics["htf_timeframe"] = run.htf_timeframe
+        if overrides:
+            run.metrics["parameter_overrides"] = overrides
         run.equity_curve = result.equity_curve
         run.trades = [_trade_to_dict(t) for t in result.trades]
         run.status = BacktestRun.Status.COMPLETED
