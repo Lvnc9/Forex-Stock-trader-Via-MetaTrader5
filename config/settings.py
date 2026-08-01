@@ -66,7 +66,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {"default": env.db("DATABASE_URL", default="sqlite:///db.sqlite3")}
+DATABASES = {
+    "default": env.db(
+        "DATABASE_URL",
+        default=f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}",
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -89,7 +94,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 TRADEBOT_DATA_ROOT = BASE_DIR / "data"
 AGENT_HEARTBEAT_TTL_SECONDS = 90
 
+# Backtest performance — parallel CSV load + on-disk bar cache under data/.cache/
+TRADEBOT_BACKTEST_CACHE = env.bool("TRADEBOT_BACKTEST_CACHE", default=True)
+TRADEBOT_BACKTEST_LOAD_WORKERS = env.int("TRADEBOT_BACKTEST_LOAD_WORKERS", default=4)
+TRADEBOT_BACKTEST_WORKERS = env.int("TRADEBOT_BACKTEST_WORKERS", default=0)  # 0 = auto (cpu-1)
+
+# Lightweight local cache for catalog scans / short-lived UI bits
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "tradebot-default",
+        "TIMEOUT": 300,
+    }
+}
+
 # Celery — optional. Without Redis, tasks run eagerly in-process.
+# For responsive UI on long M1→TF runs: Redis + CELERY_TASK_ALWAYS_EAGER=False
+# and `celery -A config worker -l info --concurrency=<cores>`.
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=True)
@@ -97,6 +118,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 LOGIN_URL = "core:login"
 LOGIN_REDIRECT_URL = "core:dashboard"

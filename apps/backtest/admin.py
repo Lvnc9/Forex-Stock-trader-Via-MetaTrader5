@@ -11,8 +11,17 @@ class BacktestRunAdmin(admin.ModelAdmin):
         "catalog_slug",
         "timeframe",
         "status",
+        "progress_pct",
         "created_at",
     )
     list_filter = ("status", "timeframe", "catalog_slug")
     search_fields = ("strategy__name", "catalog_slug")
-    readonly_fields = ("metrics", "equity_curve", "trades", "completed_at", "created_at")
+    readonly_fields = (
+        "metrics",
+        "equity_curve",
+        "trades",
+        "progress_pct",
+        "progress_message",
+        "completed_at",
+        "created_at",
+    )

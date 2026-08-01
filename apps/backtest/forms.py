@@ -1,15 +1,28 @@
 from django import forms
+from django.core.cache import cache
 
 from apps.backtest.models import BacktestRun
 from apps.marketdata.catalog import scan_data_root
 from apps.marketdata.timeframes import (
     HTF_TIMEFRAME_CHOICES,
     TIMEFRAME_CHOICES,
+    TIMEFRAME_LABELS,
     is_higher_timeframe,
     normalize_timeframe,
 )
 from apps.strategies.models import Strategy
 from apps.strategies.rules.htf_gate import strategy_requires_htf
+
+
+def _catalog_slug_choices(data_root) -> list[tuple[str, str]]:
+    if data_root is None:
+        return [("", "— no datasets —")]
+    cache_key = f"backtest:catalog_slugs:{data_root}"
+    slugs = cache.get(cache_key)
+    if slugs is None:
+        slugs = [c.slug for c in scan_data_root(data_root)]
+        cache.set(cache_key, slugs, 120)
+    return [(s, s) for s in slugs] or [("", "— no datasets —")]
 
 
 class BacktestRunForm(forms.ModelForm):
@@ -39,25 +52,31 @@ class BacktestRunForm(forms.ModelForm):
         }
         labels = {
             "htf_timeframe": "Higher timeframe (optional)",
+            "timeframe": "Primary timeframe",
         }
         help_texts = {
-            "htf_timeframe": "Passed to strategies as ctx.htf_bars / ctx.htf_indicators. Leave blank if unused.",
+            "timeframe": (
+                "Bars are loaded as M1 OHLC from disk, then resampled to this timeframe "
+                f"({', '.join(f'{k}={v}' for k, v in TIMEFRAME_LABELS.items())})."
+            ),
+            "htf_timeframe": (
+                "Passed to strategies as ctx.htf_bars / ctx.htf_indicators. Leave blank if unused."
+            ),
         }
 
     def __init__(self, *args, data_root=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["strategy"].queryset = Strategy.objects.all()
-        slugs = []
-        if data_root is not None:
-            slugs = [c.slug for c in scan_data_root(data_root)]
         self.fields["catalog_slug"] = forms.ChoiceField(
-            choices=[(s, s) for s in slugs] or [("", "— no datasets —")],
+            choices=_catalog_slug_choices(data_root),
             widget=forms.Select(attrs={"class": "tb-input"}),
         )
         self.fields["timeframe"] = forms.ChoiceField(
             choices=TIMEFRAME_CHOICES,
             initial="M5",
             widget=forms.Select(attrs={"class": "tb-input"}),
+            label="Primary timeframe",
+            help_text=self.Meta.help_texts["timeframe"],
         )
         self.fields["htf_timeframe"] = forms.ChoiceField(
             choices=HTF_TIMEFRAME_CHOICES,
@@ -65,7 +84,7 @@ class BacktestRunForm(forms.ModelForm):
             initial="",
             widget=forms.Select(attrs={"class": "tb-input"}),
             label="Higher timeframe (optional)",
-            help_text="Passed to strategies as ctx.htf_bars / ctx.htf_indicators. Leave blank if unused.",
+            help_text=self.Meta.help_texts["htf_timeframe"],
         )
 
     def clean(self):

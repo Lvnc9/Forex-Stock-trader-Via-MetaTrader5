@@ -26,7 +26,9 @@
   {% endfor %}
 
   <p class="text-xs text-zinc-600">
-    Intrabar exits use the conservative rule: stop-loss before take-profit when both are touched on the same bar.
+    Data is always M1 on disk. The engine resamples to your primary timeframe (and optional HTF)
+    before running the strategy bar-by-bar. Intrabar exits: stop-loss before take-profit when both
+    are touched on the same bar. Long runs stay responsive via Celery + progress polling.
   </p>
 
   <div class="flex gap-3">

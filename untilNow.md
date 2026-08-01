@@ -8,7 +8,6 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | --- | --- |
 | **Repo** | [github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5) |
 | **Remote** | `origin` → `https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5.git` |
-| **Open PRs** | #1 Phase C · #2 A/B · #3 Phase D · Phase E on `cursor/phase-e-htf-gate-seed-48fe` |
 
 ## Done until now
 
@@ -18,32 +17,33 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | Phase 2 — strategy UX, custom upload, deploy review | **Done** |
 | Phase 3 — MT5 agent, live worker, broker API | **Done** |
 | Phase 4 — FX/stock downloads | **Done** |
-| Polish slices 0–7 | **Done** |
-| **C** — HTF bars + SignalEngine/BacktestRunner unify | **Done** (PR #1+) |
-| **A** — Rules expression engine + RuleStrategy | **Done** (PR #2+) |
-| **B** — Rule builder UI, dry-run, delete, Python in-place edit | **Done** (PR #2+) |
-| **D** — Builder pct_offset/arith + HTF indicator source + template | **Done** (PR #3) |
-| **E** — HTF form gate, `seed_rule_templates`, LiveWorker HTF+rules smoke | **Done** (this branch) |
+| Polish A–E (rules, builder, HTF, seed) | **Done** |
+| **F — Backtest restructure** | **Done** (this session) |
 
-## Phase E (this session)
+## Phase F (this session)
 
 | Item | What |
 | ---- | ---- |
-| HTF gate | Backtest + deploy forms require `htf_timeframe` when strategy rule_spec uses HTF indicators |
-| Seed | `python manage.py seed_rule_templates` |
-| Smoke | LiveWorker test with RuleStrategy + HTF; agent README smoke steps |
+| Modular engine | `data_handler`, `broker`, `portfolio`, `metrics`, `runner` facade |
+| Timeframe-aware | M1 source → resample primary/HTF; TF metadata on metrics; form help |
+| Data loading | Prefer `months/` over yearly; epoch-ms **or** ISO timestamps; date-filtered files |
+| Speed | Threaded CSV load; parallel primary+HTF resample; indicator series cache; equity downsample |
+| Cache | Pickle under `data/.cache/` (`TRADEBOT_BACKTEST_CACHE`); catalog slug LocMem cache |
+| UI / Celery | `progress_pct` + `/backtest/<id>/status/` JSON + HTMX progress bar; Celery soft limits |
 
-## Left to do (optional / ops)
+## Left to do
 
 | Item | Notes |
 | ---- | ----- |
-| **Merge PR stack** | Prefer merge **#3** (or #E once opened) into `main` — includes C→D; then E |
-| **Windows MT5 smoke** | Real agent: seed templates → backtest M5/H1 → deploy (see `agent/README.md`) |
-| Library SL/TP knobs | Python library strategies still often emit entries without SL/TP metadata |
-| Hedge / multi-position MT5 | Not supported (v1 is netting-style flip) |
-| Deeper nested exprs | Builder supports one-level pct_offset/arith only |
-| Huge CSV / Parquet cache | Still a known risk for very large M1 sets |
-| Tick-mode intrabar | Optional later; SL-before-TP rule remains |
+| **Windows MT5 smoke** | Real agent demo: backtest → deploy (see `agent/README.md`) |
+| Lot-sized backtest | Still all-in cash sizing vs live `lot_size` |
+| Hedge / multi-position | Netting-style flip only |
+| Tick-mode intrabar | Optional; SL-before-TP remains |
+| Commit Phase F + builder UX | User has not requested commit yet |
+
+## Strategy builder UX (this session)
+
+Rule builder no longer pre-renders spare slots. Each section (**parameters / indicators / rules**) starts with **1 row**; **+ Add** uses HTMX (`strategies:builder_row`) to append a row; **−** removes a row in the DOM. Ceilings remain `MAX_PARAMS=24` / `MAX_INDICATORS=16` / `MAX_RULES=12`. Schema/runtime still unbounded.
 
 ## Run
 
@@ -56,12 +56,31 @@ python manage.py seed_rule_templates
 python manage.py runserver
 ```
 
+**Faster / non-blocking backtests (recommended for large M1 sets):**
+
+```bash
+export CELERY_TASK_ALWAYS_EAGER=False
+export TRADEBOT_BACKTEST_LOAD_WORKERS=8
+redis-server   # separate terminal
+celery -A config worker -l info --concurrency=4
+python manage.py runserver
+```
+
+Login is at `/login/`. After pull, always `migrate` (includes `backtest.0003_backtestrun_progress`).
+
+## Tests run
+
+```bash
+python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog apps.strategies.tests.test_phase_c_htf
+# 25 OK
+```
+
 ## Last commit
 
-- `e04cfff` — Phase E: HTF form gate, seed_rule_templates, and smoke path
+- (local) prior tip may still be Phase E / main — **Phase F not committed yet** unless user asked.
 
 ## Recommended next work
 
-- Merge open PRs to `main`.
-- On Windows: follow agent README HTF rule smoke-test.
-- Optional product polish: SL/TP params on library Python strategies.
+- Commit Phase F when ready.
+- On Windows: MT5 demo smoke with HTF rules + library SL/TP.
+- Optional: lot/risk sizing in `SimulatedBroker` to match live deployments.

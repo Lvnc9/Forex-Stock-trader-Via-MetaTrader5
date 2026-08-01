@@ -30,6 +30,8 @@ class BacktestRun(models.Model):
     )
     commission = models.FloatField(default=0.0, help_text="Flat commission per closed trade.")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    progress_pct = models.FloatField(default=0.0, help_text="0–100 while running.")
+    progress_message = models.CharField(max_length=240, blank=True, default="")
     metrics = models.JSONField(default=dict, blank=True)
     equity_curve = models.JSONField(default=list, blank=True)
     trades = models.JSONField(default=list, blank=True)

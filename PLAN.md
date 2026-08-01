@@ -36,9 +36,9 @@ isProject: false
 
 > **Project plan** — includes full setup for **A (all-in-one)** and **B (split)** deployments. See [Deployment](#deployment-two-supported-setups-keep-both).
 
-## Current state (2026-07-29)
+## Current state (2026-08-01)
 
-**Phases 1–3 are implemented** in this repo. Session handoff: [untilNow.md](untilNow.md). GitHub: [Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5).
+**Phases 1–4 + polish A–E** are implemented. **Phase F — backtest restructure** landed in this workspace (modular engine, M1→TF awareness, parallel load + disk cache, Celery progress). Session handoff: [untilNow.md](untilNow.md). GitHub: [Lvnc9/Forex-Stock-trader-Via-MetaTrader5](https://github.com/Lvnc9/Forex-Stock-trader-Via-MetaTrader5).
 
 | Layer | Location | Notes |
 | ----- | -------- | ----- |
@@ -46,7 +46,7 @@ isProject: false
 | Windows agent | `agent/` | `python -m agent`; `MetaTrader5` **only here** |
 | Backtest data | [tradeBot/data/](tradeBot/data/) | M1 OHLC CSVs (not in git); see [data/README.md](data/README.md) |
 
-**Still open:** merge open PRs to `main`; Windows MT5 smoke for HTF rules; optional hardening (hedging accounts, library SL/TP knobs, deeper nested exprs, Parquet cache). Phases A–E implemented — see [untilNow.md](untilNow.md).
+**Still open:** Windows MT5 demo smoke; optional hedge/multi-position; deeper nested exprs; tick-mode intrabar; lot-sized backtest parity with live.
 
 `[mql-trading-app/](mql-trading-app/)` elsewhere in the monorepo is **unrelated**; this project does not use MQL.
 
@@ -374,12 +374,15 @@ flowchart LR
 
 Strategies are **Python modules**, not MQL and not a separate mini-language required for v1.
 
+**Bone (do not redesign):** `BaseStrategy` + `parameter_schema: list[dict]` + optional JSON `rule_spec` with unbounded `parameters` / `indicators` / `rules` lists. Same pattern as production frameworks (schema-list params, not fixed arity). Parameter **count is not a system limit**. The rule **builder UI** starts with 1 row and grows via HTMX `+` (`apps/strategies/rules/builder.py` `MAX_*` ceilings only).
+
 **Interface (conceptual):**
 
 ```python
 class BaseStrategy:
     """Registered strategies live under apps/strategies/library/."""
-    parameters: dict  # exposed in UI as typed fields (periods, levels, SL/TP, etc.)
+    default_parameters: dict
+    parameter_schema: list[dict]  # unbounded typed knobs for UI forms
 
     def on_bar(self, ctx: BarContext) -> Signal | None:
         """Called once per closed bar on the strategy timeframe."""
@@ -388,15 +391,16 @@ class BaseStrategy:
 
 - `**BarContext**`: pandas OHLCV (primary + optional HTF), precomputed indicators via `**IndicatorRegistry**` (SMA, EMA, RSI, MACD, BB, ATR, cross helpers, session filters).
 - `**Signal**`: `enter_long` / `enter_short` / `exit` / `close_all` plus optional SL/TP metadata consumed by backtester and MT5 adapter.
-- **Django `Strategy` model**: name, description, `**module_path`** (e.g. `strategies.library.ma_crossover`), `**parameters` JSON**, version/hash for audit.
+- **Django `Strategy` model**: name, description, `**module_path`** (e.g. `strategies.library.ma_crossover`), `**parameters` JSON**, optional `**rule_spec` JSON**, version/hash for audit.
 
 **UI (how users “take” a strategy):**
 
 1. **Pick a library strategy** → configure parameters in forms (covers most technical setups).
 2. **Custom strategy** → upload or paste Python into `apps/strategies/user/` (admin-approved or dev-only v1), must subclass `BaseStrategy`; validator runs import + dry-run on sample bars before save.
-3. **Review step** → show docstring + parameter summary + last backtest link before **Deploy to MT5**.
+3. **Rule builder** → JSON `rule_spec` (indicators + compare rules + SL/TP); params/indicators/rules are lists. UI starts with **1 row** per section; HTMX **+** adds rows (ceilings in `builder.MAX_*`).
+4. **Review step** → show docstring + parameter summary + last backtest link before **Deploy to MT5**.
 
-**Why Python instead of JSON DSL:** Expresses arbitrary technical logic (multi-timeframe, custom indicators, state machines) in one language for backtest and live; the app’s job is to **load, parameterize, validate, and run** that code—not to compile MQL.
+**Why Python instead of JSON DSL alone:** Expresses arbitrary technical logic (multi-timeframe, custom indicators, state machines) in one language for backtest and live; the rule-spec path is a constrained DSL on the same `SignalEngine` bone—not a replacement for Python.
 
 **Shared library:** Ship 3 reference strategies (MA crossover, RSI reversal, range breakout) as Python ports of the ideas in `[mql-trading-app](mql-trading-app/)`—same ideas, **no shared code** with MQL.
 
@@ -415,14 +419,19 @@ New Django app `marketdata`:
 
 ## Backtest engine
 
-New app `backtest`:
+App `backtest` (event-driven, shared signals with live):
 
-- **BacktestRun** model: strategy FK, symbol, date range, TF, initial balance, fees/spread assumptions, status, metrics JSON, artifact paths.
-- **BacktestRunner**: bar-by-bar loop, apply SL/TP on OHLC (conservative intrabar rule: SL before TP if both hit same bar, documented).
-- **Primary metric for you:** **win rate %** = winning trades / closed trades; also show net return %, profit factor, max drawdown, trade count, equity curve.
-- Long runs: **Celery task** + progress polling (HTMX or small JSON endpoint).
+- **BacktestRun** model: strategy FK, catalog slug, primary TF + optional HTF, date range, fees/spread, status, **progress_pct / progress_message**, metrics JSON, equity/trades JSON.
+- **Modular sim:** `BacktestDataHandler` → `SignalEngine` → `Portfolio` + `SimulatedBroker` → `metrics` (see `apps/backtest/`).
+- **Timeframes:** disk data is always **M1**; runner resamples to M5–D1 (+ optional coarser HTF). Metrics include TF metadata (`primary_minutes`, bar counts, etc.).
+- **Data path:** prefer `months/` shards over yearly duplicates; parse epoch-ms **or** ISO timestamps; date-filtered file selection; parallel CSV reads; pickle cache under `data/.cache/`.
+- **Speed / UI:** indicator series cache in `SignalEngine`; Celery task + `/backtest/<id>/status/` JSON + HTMX progress bar; equity curve downsampled for storage.
+- **Intrabar rule:** SL before TP if both hit the same bar (`INTRABAR_RULE`).
+- **Primary metric:** win rate %; also net return %, profit factor, max drawdown, trade count, equity curve.
 
-Charts: **Lightweight Charts** or Chart.js for equity + optional price with entry/exit markers.
+Charts: Chart.js equity curve on the detail page.
+
+**Async production:** `CELERY_TASK_ALWAYS_EAGER=False`, Redis, `celery -A config worker --concurrency=N`.
 
 ---
 
@@ -531,6 +540,7 @@ Prioritize with [untilNow.md](untilNow.md). Items below marked when completed in
 | Rules engine + builder | `apps/strategies/rules/` | JSON rule-spec strategies + fixed-slot builder UI | **done (Phases A/B)** |
 | Builder expr + HTF inds | `rules/builder.py`, templates | pct_offset/arith in UI; indicator `source: htf` | **done (Phase D)** |
 | HTF gate + seed templates | forms, `seed_rule_templates`, agent docs | Require HTF when needed; seed + smoke path | **done (Phase E)** |
+| Backtest restructure | `apps/backtest/`, `apps/marketdata/loader.py` | Modular engine, TF metadata, parallel load, disk cache, progress API | **done (Phase F)** |
 
 Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
@@ -544,8 +554,8 @@ Agent workflow templates: [docs/WORKFLOW.md](docs/WORKFLOW.md).
 | MT5 Python only works with local terminal | **Agent on Windows** next to MT5; web app never imports MetaTrader5 |
 | Home PC behind NAT                        | Agent uses **outbound HTTPS only**; no inbound firewall             |
 | Broker symbol names ≠ catalog ids         | Symbol map UI + validation before deploy                            |
+| Huge M1 CSV memory                        | Prefer months-only; date-filtered files; `data/.cache/` pickle; parallel load workers |
 | Intrabar SL/TP ambiguity                  | Fixed documented rule; optional “tick mode” later                   |
-| Huge M1 CSV memory                        | Date-chunked reads; optional Parquet cache command later            |
 
 
 ---

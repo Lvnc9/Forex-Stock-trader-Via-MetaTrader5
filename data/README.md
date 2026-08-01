@@ -8,14 +8,35 @@ OHLC CSVs for backtesting. **Agents:** use this file for layout — do not load 
 data/
   {symbol}/           # e.g. eurusd, spx, aapl
     YYYY.csv          # optional merged year file
-    months/           # dukascopy-node shards
+    months/           # preferred: dukascopy-node M1 shards (*-m1-YYYY-MM.csv)
     download_meta.json
+  .cache/             # auto-built pickle cache (gitignored) — M1 + resampled TFs
 ```
+
+When both `months/` and `YYYY.csv` exist, the loader **uses months only** (avoids double RAM).
 
 ## CSV schema (Dukascopy / TradeBot loader)
 
 - Columns: `timestamp,open,high,low,close`
-- `timestamp`: epoch **milliseconds** (UTC) when produced by our normalizer; dukascopy-node may write datetime strings that the loader accepts
+- `timestamp`: epoch **milliseconds** (UTC) preferred; ISO datetime strings are also accepted
+- Granularity on disk: **M1** (1-minute bars). Strategy timeframes (M5–D1) are resampled at backtest time.
+
+## Backtest timeframes
+
+| TF | Meaning | Built from |
+| -- | ------- | ---------- |
+| M1 | 1 minute | source CSV |
+| M5 / M15 / M30 | 5 / 15 / 30 minutes | resample M1 |
+| H1 / H4 | 1 / 4 hours | resample M1 |
+| D1 | 1 day | resample M1 |
+
+Optional HTF must be **coarser** than primary (e.g. primary M5 + HTF H1).
+
+## Performance knobs
+
+- Parallel CSV reads: `TRADEBOT_BACKTEST_LOAD_WORKERS` (default 4)
+- Disk cache: `TRADEBOT_BACKTEST_CACHE=True` → `data/.cache/`
+- Async UI: `CELERY_TASK_ALWAYS_EAGER=False` + Redis + `celery -A config worker --concurrency=N`
 
 ## Download commands
 

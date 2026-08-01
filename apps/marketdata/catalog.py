@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-INSTRUMENT_SKIP_DIRS = {"_work", "_tmp", "node_modules", "months"}
+INSTRUMENT_SKIP_DIRS = {"_work", "_tmp", "_histdata_tmp", "node_modules", "months", ".cache"}
 
 
 @dataclass(frozen=True)
@@ -55,11 +55,45 @@ def _timestamp_bounds(csv_path: Path) -> tuple[datetime | None, datetime | None]
 
 
 def _parse_ts_ms(raw: str) -> datetime | None:
-    try:
-        ms = int(float(raw))
-        return datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
-    except (TypeError, ValueError):
+    """Parse a CSV timestamp cell: epoch ms/s or ISO/date string."""
+    text = (raw or "").strip().strip('"')
+    if not text or text.startswith("\x00"):
         return None
+    try:
+        value = float(text)
+        # Heuristic: >= 1e12 → ms; >= 1e9 → seconds; else reject.
+        if value >= 1_000_000_000_000:
+            return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc)
+        if value >= 1_000_000_000:
+            return datetime.fromtimestamp(value, tz=timezone.utc)
+    except (TypeError, ValueError):
+        pass
+    try:
+        ts = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def file_covers_range(
+    csv_path: Path,
+    start: datetime | None,
+    end: datetime | None,
+) -> bool:
+    """True when the file's timestamp span overlaps [start, end] (inclusive)."""
+    if start is None and end is None:
+        return True
+    file_start, file_end = _timestamp_bounds(csv_path)
+    if file_start is None or file_end is None:
+        # Unknown bounds — keep the file; loader will filter rows.
+        return True
+    if start is not None and file_end < start:
+        return False
+    if end is not None and file_start > end:
+        return False
+    return True
 
 
 def _guess_dukascopy_id(files: list[CatalogFile]) -> str | None:
@@ -73,14 +107,27 @@ def _guess_dukascopy_id(files: list[CatalogFile]) -> str | None:
 
 
 def _collect_csv_files(slug_dir: Path) -> list[CatalogFile]:
-    found: list[CatalogFile] = []
+    """Collect OHLC CSVs for a slug.
+
+    Prefer ``months/*.csv`` shards when present so we do not also load the
+    merged ``YYYY.csv`` copies (same bars, double RAM). Fall back to yearly
+    files when monthly shards are missing.
+    """
     months_dir = slug_dir / "months"
     if months_dir.is_dir():
-        for path in sorted(months_dir.glob("*.csv")):
-            found.append(CatalogFile(path=path, kind="monthly"))
-    for path in sorted(slug_dir.glob("*.csv")):
-        found.append(CatalogFile(path=path, kind="yearly"))
-    return found
+        monthly = [
+            CatalogFile(path=path, kind="monthly")
+            for path in sorted(months_dir.glob("*.csv"))
+            if path.is_file() and path.stat().st_size > 0
+        ]
+        if monthly:
+            return monthly
+
+    return [
+        CatalogFile(path=path, kind="yearly")
+        for path in sorted(slug_dir.glob("*.csv"))
+        if path.is_file() and path.stat().st_size > 0
+    ]
 
 
 def scan_data_root(data_root: Path) -> list[InstrumentCatalog]:

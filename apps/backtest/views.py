@@ -3,9 +3,11 @@ import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
 from apps.backtest.forms import BacktestRunForm
@@ -36,6 +38,8 @@ class BacktestCreateView(CreateView):
     def form_valid(self, form):
         self.object = form.save(commit=False)
         self.object.status = BacktestRun.Status.PENDING
+        self.object.progress_pct = 0.0
+        self.object.progress_message = "Queued"
         self.object.save()
         enqueue_backtest(self.object)
         return redirect("backtest:detail", pk=self.object.pk)
@@ -58,6 +62,26 @@ class BacktestDetailView(DetailView):
         ctx["metrics"] = run.metrics or {}
         ctx["trade_rows"] = run.trades or []
         return ctx
+
+
+@method_decorator(login_required, name="dispatch")
+class BacktestStatusView(View):
+    """Lightweight JSON status for HTMX / polling (keeps detail page snappy)."""
+
+    def get(self, request, pk: int):
+        run = get_object_or_404(BacktestRun, pk=pk)
+        return JsonResponse(
+            {
+                "id": run.pk,
+                "status": run.status,
+                "progress_pct": run.progress_pct,
+                "progress_message": run.progress_message,
+                "error_message": run.error_message,
+                "win_rate_pct": run.win_rate_pct,
+                "done": run.status
+                in (BacktestRun.Status.COMPLETED, BacktestRun.Status.FAILED),
+            }
+        )
 
 
 @method_decorator(login_required, name="dispatch")
