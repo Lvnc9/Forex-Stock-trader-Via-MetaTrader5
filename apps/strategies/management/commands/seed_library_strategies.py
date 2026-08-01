@@ -18,6 +18,7 @@ class Command(BaseCommand):
                     "description": cls.description,
                     "module_path": cls.module_path,
                     "parameters": cls.default_parameters,
+                    "rule_spec": {},
                     "is_library": True,
                 },
             )

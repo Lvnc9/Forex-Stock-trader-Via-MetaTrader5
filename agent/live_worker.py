@@ -45,7 +45,14 @@ class LiveWorker:
         lot = float(dep.get("lot_size") or 0.01)
         runtime = self.runtimes.setdefault(dep_id, DeploymentRuntime(deployment_id=dep_id))
 
-        bars = self.adapter.copy_rates_df(symbol, tf)
+        try:
+            strategy = instantiate_strategy(dep["module_path"], dep.get("parameters"))
+        except Exception as exc:
+            self.errors.append(f"dep {dep_id}: strategy load failed: {exc}")
+            return {"id": dep_id, "last_bar": runtime.last_bar_iso, "status": "strategy_error"}
+
+        need = max(400, self.engine._warmup_bars(strategy) + 50)
+        bars = self.adapter.copy_rates_df(symbol, tf, count=need)
         if bars.empty or len(bars) < 30:
             self.errors.append(f"dep {dep_id}: insufficient bars for {symbol}")
             return {
@@ -59,15 +66,9 @@ class LiveWorker:
         if runtime.last_bar_iso == last_iso:
             return {"id": dep_id, "last_bar": last_iso, "status": "unchanged"}
 
-        try:
-            strategy = instantiate_strategy(dep["module_path"], dep.get("parameters"))
-        except Exception as exc:
-            self.errors.append(f"dep {dep_id}: strategy load failed: {exc}")
-            return {"id": dep_id, "last_bar": last_iso, "status": "strategy_error"}
-
         htf_bars = None
         if htf_tf:
-            htf_bars = self.adapter.copy_rates_df(symbol, htf_tf)
+            htf_bars = self.adapter.copy_rates_df(symbol, htf_tf, count=need)
             if htf_bars.empty:
                 self.errors.append(f"dep {dep_id}: insufficient HTF bars ({htf_tf}) for {symbol}")
                 return {"id": dep_id, "last_bar": last_iso, "status": "no_htf_data"}

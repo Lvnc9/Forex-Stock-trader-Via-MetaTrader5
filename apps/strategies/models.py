@@ -27,7 +27,9 @@ class Strategy(models.Model):
 
     @property
     def is_rule_strategy(self) -> bool:
-        return bool(self.rule_spec) or self.module_path.startswith("apps.strategies.rules.")
+        # Require a real rule_spec. module_path alone is not enough (empty-spec rows
+        # used to look like rules and broke /strategies/ edit + parameters flows).
+        return bool(self.rule_spec)
 
     @property
     def is_custom_python(self) -> bool:

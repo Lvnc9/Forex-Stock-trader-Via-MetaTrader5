@@ -28,6 +28,9 @@ class BrokerAgentsView(ListView):
 
 @method_decorator(login_required, name="dispatch")
 class BrokerCreateAgentView(View):
+    def get(self, request):
+        return redirect("brokers:agents")
+
     def post(self, request):
         form = CreateAgentForm(request.POST)
         if not form.is_valid():
