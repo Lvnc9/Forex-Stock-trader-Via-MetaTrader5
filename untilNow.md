@@ -77,7 +77,8 @@ python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog ap
 
 ## Last commit
 
-- (local) prior tip may still be Phase E / main — **Phase F not committed yet** unless user asked.
+- `4cfb90d` — Phase F: modular backtest engine with TF-aware load, cache, and progress
+- (tip) rule-builder UI ceilings / dynamic spare slots (same branch)
 
 ## Recommended next work
 
