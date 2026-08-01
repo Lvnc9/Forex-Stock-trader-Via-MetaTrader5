@@ -55,6 +55,9 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
             initial_balance=float(run.initial_balance),
             spread_pct=float(run.spread_pct),
             commission=float(run.commission),
+            sizing_mode=run.sizing_mode,
+            lot_size=float(run.lot_size),
+            contract_size=float(run.contract_size),
             progress_callback=on_progress,
             timeframe_meta=tf_meta,
         )

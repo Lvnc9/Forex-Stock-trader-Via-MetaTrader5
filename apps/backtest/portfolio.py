@@ -64,7 +64,7 @@ class Portfolio:
             )
 
         entry = self.broker.entry_price(side, float(bar["close"]))
-        units = self.broker.size_all_in(self.cash, entry)
+        units = self.broker.size_position(self.cash, entry)
         if units <= 0:
             self.position = None
             return

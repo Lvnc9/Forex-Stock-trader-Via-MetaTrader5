@@ -10,11 +10,12 @@ class BacktestRunAdmin(admin.ModelAdmin):
         "strategy",
         "catalog_slug",
         "timeframe",
+        "sizing_mode",
         "status",
         "progress_pct",
         "created_at",
     )
-    list_filter = ("status", "timeframe", "catalog_slug")
+    list_filter = ("status", "timeframe", "sizing_mode", "catalog_slug")
     search_fields = ("strategy__name", "catalog_slug")
     readonly_fields = (
         "metrics",

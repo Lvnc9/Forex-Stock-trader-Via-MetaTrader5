@@ -38,6 +38,9 @@ class BacktestRunForm(forms.ModelForm):
             "initial_balance",
             "spread_pct",
             "commission",
+            "sizing_mode",
+            "lot_size",
+            "contract_size",
         ]
         widgets = {
             "start": forms.DateInput(attrs={"type": "date", "class": "tb-input"}),
@@ -49,10 +52,16 @@ class BacktestRunForm(forms.ModelForm):
             "initial_balance": forms.NumberInput(attrs={"class": "tb-input", "step": "0.01"}),
             "spread_pct": forms.NumberInput(attrs={"class": "tb-input", "step": "0.00001"}),
             "commission": forms.NumberInput(attrs={"class": "tb-input", "step": "0.01"}),
+            "sizing_mode": forms.Select(attrs={"class": "tb-input"}),
+            "lot_size": forms.NumberInput(attrs={"class": "tb-input", "step": "0.01"}),
+            "contract_size": forms.NumberInput(attrs={"class": "tb-input", "step": "1"}),
         }
         labels = {
             "htf_timeframe": "Higher timeframe (optional)",
             "timeframe": "Primary timeframe",
+            "sizing_mode": "Position sizing",
+            "lot_size": "Lot size",
+            "contract_size": "Contract size (units per lot)",
         }
         help_texts = {
             "timeframe": (
@@ -62,6 +71,12 @@ class BacktestRunForm(forms.ModelForm):
             "htf_timeframe": (
                 "Passed to strategies as ctx.htf_bars / ctx.htf_indicators. Leave blank if unused."
             ),
+            "sizing_mode": (
+                "All-in sizes each entry as cash ÷ price. Fixed lots uses lot_size × contract_size "
+                "(same lot semantics as live Deployment.lot_size)."
+            ),
+            "lot_size": "Ignored for all-in. Default 0.01 matches live deployments.",
+            "contract_size": "100000 = standard FX lot. Lower for some CFDs/indices.",
         }
 
     def __init__(self, *args, data_root=None, **kwargs):
@@ -108,4 +123,15 @@ class BacktestRunForm(forms.ModelForm):
                 "htf_timeframe",
                 "This strategy uses HTF indicators — choose a higher timeframe.",
             )
+
+        sizing_mode = cleaned.get("sizing_mode") or BacktestRun.SizingMode.ALL_IN
+        lot_size = cleaned.get("lot_size")
+        contract_size = cleaned.get("contract_size")
+        if sizing_mode == BacktestRun.SizingMode.FIXED_LOTS:
+            if lot_size is None or float(lot_size) <= 0:
+                self.add_error("lot_size", "Lot size must be positive for fixed-lots sizing.")
+            if contract_size is None or float(contract_size) <= 0:
+                self.add_error("contract_size", "Contract size must be positive.")
+        elif contract_size is not None and float(contract_size) <= 0:
+            self.add_error("contract_size", "Contract size must be positive.")
         return cleaned

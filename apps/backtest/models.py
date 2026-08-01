@@ -1,5 +1,12 @@
 from django.db import models
 
+from apps.backtest.broker import (
+    DEFAULT_CONTRACT_SIZE,
+    DEFAULT_LOT_SIZE,
+    SIZING_ALL_IN,
+    SIZING_FIXED_LOTS,
+)
+
 
 class BacktestRun(models.Model):
     class Status(models.TextChoices):
@@ -7,6 +14,10 @@ class BacktestRun(models.Model):
         RUNNING = "running", "Running"
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
+
+    class SizingMode(models.TextChoices):
+        ALL_IN = SIZING_ALL_IN, "All-in (cash ÷ price)"
+        FIXED_LOTS = SIZING_FIXED_LOTS, "Fixed lots (match live Deployment.lot_size)"
 
     strategy = models.ForeignKey(
         "strategies.Strategy",
@@ -29,6 +40,20 @@ class BacktestRun(models.Model):
         help_text="Total spread as fraction of price (e.g. 0.0002 = 0.02%).",
     )
     commission = models.FloatField(default=0.0, help_text="Flat commission per closed trade.")
+    sizing_mode = models.CharField(
+        max_length=16,
+        choices=SizingMode.choices,
+        default=SizingMode.ALL_IN,
+        help_text="all_in compounds cash; fixed_lots matches live Deployment.lot_size.",
+    )
+    lot_size = models.FloatField(
+        default=DEFAULT_LOT_SIZE,
+        help_text="Used when sizing_mode=fixed_lots (same meaning as Deployment.lot_size).",
+    )
+    contract_size = models.FloatField(
+        default=DEFAULT_CONTRACT_SIZE,
+        help_text="Units per 1.0 lot (100000 for standard FX; adjust for CFDs/indices).",
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     progress_pct = models.FloatField(default=0.0, help_text="0–100 while running.")
     progress_message = models.CharField(max_length=240, blank=True, default="")

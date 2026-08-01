@@ -13,6 +13,14 @@
     {{ run.strategy.name }} · {{ run.catalog_slug }} · {{ run.timeframe }}{% if run.htf_timeframe %} / {{ run.htf_timeframe }} HTF{% endif %}
   </h2>
   <p class="text-sm text-zinc-500">{{ run.start }} → {{ run.end }}</p>
+  <p class="mt-1 text-xs text-zinc-600">
+    Sizing:
+    {% if run.sizing_mode == "fixed_lots" %}
+      fixed lots · {{ run.lot_size }} lot × {{ run.contract_size|floatformat:0 }} contract
+    {% else %}
+      all-in (cash ÷ price)
+    {% endif %}
+  </p>
   {% if metrics.primary_label %}
     <p class="mt-1 text-xs text-zinc-600">
       Source M1 → {{ metrics.primary_label }}{% if metrics.htf_label %} (+ {{ metrics.htf_label }} HTF){% endif %}

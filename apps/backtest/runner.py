@@ -6,7 +6,12 @@ from collections.abc import Callable
 
 import pandas as pd
 
-from apps.backtest.broker import SimulatedBroker
+from apps.backtest.broker import (
+    DEFAULT_CONTRACT_SIZE,
+    DEFAULT_LOT_SIZE,
+    SIZING_ALL_IN,
+    SimulatedBroker,
+)
 from apps.backtest.constants import EQUITY_CURVE_MAX_POINTS, INTRABAR_RULE
 from apps.backtest.metrics import compute_metrics, downsample_equity, empty_metrics
 from apps.backtest.portfolio import Portfolio
@@ -39,6 +44,9 @@ class BacktestRunner:
         initial_balance: float = 10_000.0,
         spread_pct: float = 0.0,
         commission: float = 0.0,
+        sizing_mode: str = SIZING_ALL_IN,
+        lot_size: float = DEFAULT_LOT_SIZE,
+        contract_size: float = DEFAULT_CONTRACT_SIZE,
         warmup: int | None = None,
         progress_callback: Callable[[float, str], None] | None = None,
         timeframe_meta: dict | None = None,
@@ -69,7 +77,13 @@ class BacktestRunner:
         signals_by_bar = {event.bar_index: event.signal for event in events}
 
         report(60.0, "Simulating portfolio")
-        broker = SimulatedBroker(spread_pct=spread_pct, commission=commission)
+        broker = SimulatedBroker(
+            spread_pct=spread_pct,
+            commission=commission,
+            sizing_mode=sizing_mode,
+            lot_size=lot_size,
+            contract_size=contract_size,
+        )
         portfolio = Portfolio(broker, initial_balance=initial_balance)
         equity_curve: list[dict] = []
 
@@ -109,6 +123,7 @@ class BacktestRunner:
         metrics["intrabar_rule"] = INTRABAR_RULE
         metrics["equity_points_stored"] = len(curve)
         metrics["equity_points_full"] = len(equity_curve)
+        metrics.update(broker.sizing_meta())
         if timeframe_meta:
             metrics.update(timeframe_meta)
 
