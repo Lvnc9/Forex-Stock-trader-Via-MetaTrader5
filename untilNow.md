@@ -84,6 +84,7 @@ python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog
 
 ## Last commits (this branch tip)
 
+- `80b6dc4` — G4: Windows smoke docs + Phase G closeout
 - `82b8f25` — G3: Parquet bar cache via pyarrow
 - `d8419ea` — G2: multiprocess parameter sweeps
 - `3fcab11` — G1: fixed-lots sizing parity
