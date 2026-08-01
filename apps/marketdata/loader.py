@@ -93,13 +93,17 @@ def _cache_dir(data_root: Path) -> Path:
     return path
 
 
+CACHE_EXT = ".parquet"
+LEGACY_CACHE_EXT = ".pkl"
+
+
 def _m1_cache_path(data_root: Path, slug: str, files: list[CatalogFile]) -> Path:
     digest = hashlib.sha1()
     digest.update(slug.encode())
     for item in files:
         st = item.path.stat()
         digest.update(f"{item.path.name}:{st.st_mtime_ns}:{st.st_size}".encode())
-    return _cache_dir(data_root) / slug / f"m1-{digest.hexdigest()[:16]}.pkl"
+    return _cache_dir(data_root) / slug / f"m1-{digest.hexdigest()[:16]}{CACHE_EXT}"
 
 
 def _resample_cache_path(
@@ -118,27 +122,58 @@ def _resample_cache_path(
     for item in files:
         st = item.path.stat()
         digest.update(f"{item.path.name}:{st.st_mtime_ns}:{st.st_size}".encode())
-    return _cache_dir(data_root) / slug / f"{normalize_timeframe(timeframe).lower()}-{digest.hexdigest()[:16]}.pkl"
+    return (
+        _cache_dir(data_root)
+        / slug
+        / f"{normalize_timeframe(timeframe).lower()}-{digest.hexdigest()[:16]}{CACHE_EXT}"
+    )
+
+
+def _legacy_pickle_path(path: Path) -> Path:
+    return path.with_suffix(LEGACY_CACHE_EXT)
+
+
+def _unlink_quiet(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.debug("Could not remove %s", path, exc_info=True)
 
 
 def _load_frame_cache(path: Path) -> pd.DataFrame | None:
-    if not path.is_file():
-        return None
-    try:
-        return pd.read_pickle(path)
-    except Exception:
-        logger.warning("Ignoring corrupt bar cache %s", path)
-        return None
+    if path.is_file():
+        try:
+            return pd.read_parquet(path)
+        except Exception:
+            logger.warning("Ignoring corrupt Parquet bar cache %s", path)
+            _unlink_quiet(path)
+            return None
+
+    # One-shot migration from Phase F pickle caches (same digest stem).
+    legacy = _legacy_pickle_path(path)
+    if legacy.is_file():
+        try:
+            frame = pd.read_pickle(legacy)
+            _save_frame_cache(path, frame)
+            _unlink_quiet(legacy)
+            return frame
+        except Exception:
+            logger.warning("Ignoring corrupt legacy pickle cache %s", legacy)
+            _unlink_quiet(legacy)
+            return None
+    return None
 
 
 def _save_frame_cache(path: Path, frame: pd.DataFrame) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
-        frame.to_pickle(tmp)
+        frame.to_parquet(tmp, engine="pyarrow")
         tmp.replace(path)
+        _unlink_quiet(_legacy_pickle_path(path))
     except Exception:
         logger.warning("Could not write bar cache %s", path, exc_info=True)
+        _unlink_quiet(path.with_suffix(path.suffix + ".tmp"))
 
 
 def _read_csvs_parallel(files: list[CatalogFile], max_workers: int) -> list[pd.DataFrame]:
@@ -192,7 +227,7 @@ def load_m1_bars(
     """Load M1 bars for *slug*, optionally filtered to [start, end].
 
     Uses month shards preferentially (see catalog), parallel CSV reads, and an
-    optional on-disk pickle cache under ``data/.cache/``.
+    optional on-disk Parquet cache under ``data/.cache/``.
     """
     from django.conf import settings
 

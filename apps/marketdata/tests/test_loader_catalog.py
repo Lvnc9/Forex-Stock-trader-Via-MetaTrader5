@@ -47,3 +47,45 @@ class CatalogCollectTests(SimpleTestCase):
             self.assertTrue(file_covers_range(path, start, end))
             far = datetime(2030, 1, 1, tzinfo=timezone.utc)
             self.assertFalse(file_covers_range(path, far, far))
+
+
+class ParquetCacheTests(SimpleTestCase):
+    def test_roundtrip_and_legacy_pkl_migration(self):
+        import tempfile
+
+        import pandas as pd
+
+        from apps.marketdata.loader import (
+            CACHE_EXT,
+            _load_frame_cache,
+            _save_frame_cache,
+        )
+
+        index = pd.date_range("2024-01-01", periods=3, freq="1min", tz="UTC")
+        frame = pd.DataFrame(
+            {
+                "open": [1.0, 2.0, 3.0],
+                "high": [1.1, 2.1, 3.1],
+                "low": [0.9, 1.9, 2.9],
+                "close": [1.05, 2.05, 3.05],
+            },
+            index=index,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            parquet_path = Path(tmp) / f"m1-deadbeef{CACHE_EXT}"
+            _save_frame_cache(parquet_path, frame)
+            self.assertTrue(parquet_path.is_file())
+            loaded = _load_frame_cache(parquet_path)
+            self.assertIsNotNone(loaded)
+            assert loaded is not None
+            self.assertEqual(len(loaded), 3)
+            self.assertAlmostEqual(float(loaded["close"].iloc[-1]), 3.05)
+
+            # Legacy .pkl with same stem is migrated then removed.
+            legacy = parquet_path.with_suffix(".pkl")
+            parquet_path.unlink()
+            frame.to_pickle(legacy)
+            migrated = _load_frame_cache(parquet_path)
+            self.assertIsNotNone(migrated)
+            self.assertTrue(parquet_path.is_file())
+            self.assertFalse(legacy.exists())

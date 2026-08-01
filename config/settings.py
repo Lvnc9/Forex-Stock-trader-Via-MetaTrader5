@@ -94,7 +94,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 TRADEBOT_DATA_ROOT = BASE_DIR / "data"
 AGENT_HEARTBEAT_TTL_SECONDS = 90
 
-# Backtest performance — parallel CSV load + on-disk bar cache under data/.cache/
+# Backtest performance — parallel CSV load + on-disk Parquet bar cache under data/.cache/
 TRADEBOT_BACKTEST_CACHE = env.bool("TRADEBOT_BACKTEST_CACHE", default=True)
 TRADEBOT_BACKTEST_LOAD_WORKERS = env.int("TRADEBOT_BACKTEST_LOAD_WORKERS", default=4)
 TRADEBOT_BACKTEST_WORKERS = env.int("TRADEBOT_BACKTEST_WORKERS", default=0)  # 0 = auto (cpu-1)
