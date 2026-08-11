@@ -176,6 +176,25 @@ class HeadShouldersStrategyTests(SimpleTestCase):
             self.assertEqual(event.signal.action, SignalAction.ENTER_SHORT)
             self.assertEqual(event.signal.metadata.get("direction"), "top")
 
+    def test_prepare_detects_once_then_on_bar_is_lookup(self) -> None:
+        strategy = HeadAndShouldersStrategy({"min_score": 50})
+        strategy.prepare(self.bars)
+        self.assertGreater(len(strategy._entries_by_bar), 0)
+        # Second prepare replaces the cache (idempotent, not additive).
+        n = len(strategy._entries_by_bar)
+        strategy.prepare(self.bars)
+        self.assertEqual(len(strategy._entries_by_bar), n)
+
+    def test_engine_run_finishes_quickly_on_synthetic(self) -> None:
+        import time
+
+        strategy = HeadAndShouldersStrategy({"min_score": 50})
+        t0 = time.perf_counter()
+        events = SignalEngine().run(strategy, self.bars, warmup=60)
+        elapsed = time.perf_counter() - t0
+        self.assertLess(elapsed, 5.0, f"H&S SignalEngine took {elapsed:.2f}s — prepare/on_bar regression?")
+        self.assertGreaterEqual(len(events), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

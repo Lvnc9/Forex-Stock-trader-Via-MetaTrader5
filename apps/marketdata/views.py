@@ -7,6 +7,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView
 
 from apps.marketdata.catalog import scan_data_root
+from apps.marketdata.instruments import catalog_choice_label
 from apps.marketdata.forms import SymbolMapForm
 from apps.marketdata.models import SymbolMap
 
@@ -26,6 +27,7 @@ class DataCatalogView(TemplateView):
                 {
                     "catalog": item,
                     "symbol_map": sym,
+                    "display_label": catalog_choice_label(item.slug, item.dukascopy_id),
                 }
             )
         ctx["instruments"] = rows

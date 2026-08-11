@@ -128,11 +128,14 @@
     Use <span class="text-zinc-400">+</span> to add rows (ceilings: {{ max_params }} params / {{ max_indicators }} indicators / {{ max_rules }} rules per group).
   </p>
 
-  <div class="flex gap-3">
+  <div class="flex flex-wrap gap-3">
     <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
       {% if strategy %}Save rule strategy{% else %}Create rule strategy{% endif %}
     </button>
     <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800">Cancel</a>
+    {% if strategy %}
+      <a href="{% url 'backtest:create' %}?strategy={{ strategy.pk }}" class="text-sm text-sky-400 hover:text-sky-300 self-center">Run backtest →</a>
+    {% endif %}
   </div>
 </form>
 {% endblock %}

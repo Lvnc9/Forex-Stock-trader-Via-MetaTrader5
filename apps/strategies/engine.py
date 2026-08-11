@@ -125,6 +125,10 @@ class SignalEngine:
         n = len(bars)
         stride = max(n // 20, 1)
 
+        if progress_callback is not None:
+            progress_callback(0.0, "Preparing strategy")
+        strategy.prepare(bars, htf_bars=htf_bars)
+
         for i in range(n):
             if i + 1 < min_bars:
                 continue
@@ -154,6 +158,8 @@ class SignalEngine:
         i = len(bars) - 1
         if i + 1 < min_bars:
             return None
+        # Live path: re-prepare on the closed history so pattern strategies stay correct.
+        strategy.prepare(bars, htf_bars=htf_bars)
         ctx = self.build_context(strategy, bars, i, htf_bars=htf_bars)
         return strategy.on_bar(ctx)
 

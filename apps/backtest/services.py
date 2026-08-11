@@ -1,22 +1,52 @@
 from __future__ import annotations
 
+import signal
+import threading
 from datetime import datetime, time
 
 from django.conf import settings
 from django.utils import timezone
 
+from apps.backtest.constants import BACKTEST_TIMEOUT_SECONDS, MAX_BACKTEST_BARS
 from apps.backtest.data_handler import BacktestDataHandler
 from apps.backtest.models import BacktestRun
-from apps.backtest.progress import mark_running, update_run_progress
+from apps.backtest.progress import fail_orphaned_runs, mark_running, update_run_progress
 from apps.backtest.runner import BacktestRunner, TradeRecord
 from apps.strategies.loader import instantiate_strategy
 
 
+class BacktestTimeoutError(TimeoutError):
+    """Raised when a single backtest exceeds BACKTEST_TIMEOUT_SECONDS."""
+
+
+def _timeout_handler(signum, frame) -> None:  # noqa: ARG001
+    raise BacktestTimeoutError(
+        f"Backtest exceeded {BACKTEST_TIMEOUT_SECONDS}s wall-clock limit. "
+        "Use a higher timeframe (H1/H4) or a shorter date range."
+    )
+
+
+def _can_use_sigalrm() -> bool:
+    """SIGALRM is main-thread only; Celery / runserver worker threads must skip it."""
+    if not hasattr(signal, "SIGALRM"):
+        return False
+    if BACKTEST_TIMEOUT_SECONDS <= 0:
+        return False
+    return threading.current_thread() is threading.main_thread()
+
+
 def execute_backtest(run: BacktestRun) -> BacktestRun:
     """Load bars (primary + optional HTF), run BacktestRunner, persist metrics."""
+    fail_orphaned_runs()
     mark_running(run)
 
+    alarm_set = False
     try:
+        if _can_use_sigalrm():
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(int(BACKTEST_TIMEOUT_SECONDS))
+            alarm_set = True
+
         params = run.strategy.runtime_parameters()
         overrides = dict(run.parameter_overrides or {})
         if overrides:
@@ -41,7 +71,15 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
         if bars.empty:
             raise ValueError("No bars in selected date range / timeframe.")
 
-        update_run_progress(run, 8.0, f"Loaded {len(bars)} {run.timeframe} bars")
+        n_bars = len(bars)
+        if n_bars > MAX_BACKTEST_BARS:
+            raise ValueError(
+                f"Too many bars ({n_bars:,} > {MAX_BACKTEST_BARS:,}). "
+                "Shorten the date range or use a higher timeframe (H1/H4). "
+                "Multi-year M1 will hang pattern strategies like Head & shoulders."
+            )
+
+        update_run_progress(run, 8.0, f"Loaded {n_bars} {run.timeframe} bars")
 
         # Throttle DB progress writes (every ~5%).
         last_saved = [-1.0]
@@ -95,6 +133,9 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
             ]
         )
         return run
+    finally:
+        if alarm_set:
+            signal.alarm(0)
 
 
 def _trade_to_dict(trade: TradeRecord) -> dict:

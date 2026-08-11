@@ -5,6 +5,8 @@ Requires Node.js + npx. Example:
 
   python manage.py download_bars --instrument eurusd --slug eurusd --from 2024-01-01 --to 2024-01-31
   python manage.py download_bars --fx-majors --from 2024-01-01 --to 2024-01-07 --dry-run
+  python manage.py download_bars --metals --from 2024-01-01 --to 2024-01-31
+  python manage.py download_bars --instrument xauusd --slug xauusd --from 2024-01-01 --to 2024-01-31
 """
 
 from __future__ import annotations
@@ -18,30 +20,26 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-# Dukascopy instrument id → local catalog slug (FX majors first).
-FX_MAJORS: dict[str, str] = {
-    "eurusd": "eurusd",
-    "gbpusd": "gbpusd",
-    "usdjpy": "usdjpy",
-    "usdchf": "usdchf",
-    "audusd": "audusd",
-    "usdcad": "usdcad",
-    "nzdusd": "nzdusd",
-}
+from apps.marketdata.instruments import FX_MAJORS, METALS
 
 
 class Command(BaseCommand):
     help = "Download M1 bars with dukascopy-node into TRADEBOT_DATA_ROOT."
 
     def add_arguments(self, parser):
-        parser.add_argument("--instrument", help="Dukascopy instrument id (e.g. eurusd)")
+        parser.add_argument("--instrument", help="Dukascopy instrument id (e.g. eurusd, xauusd)")
         parser.add_argument("--slug", help="Local catalog folder name (default: instrument)")
         parser.add_argument("--from", dest="date_from", required=True, help="YYYY-MM-DD")
         parser.add_argument("--to", dest="date_to", required=True, help="YYYY-MM-DD")
         parser.add_argument(
             "--fx-majors",
             action="store_true",
-            help="Download all FX majors in FX_MAJORS (ignores --instrument).",
+            help=f"Download FX majors: {', '.join(sorted(FX_MAJORS))}",
+        )
+        parser.add_argument(
+            "--metals",
+            action="store_true",
+            help=f"Download metals: {', '.join(sorted(METALS))} (includes XAUUSD gold)",
         )
         parser.add_argument(
             "--dry-run",
@@ -65,11 +63,16 @@ class Command(BaseCommand):
 
         jobs: list[tuple[str, str]] = []
         if options["fx_majors"]:
-            jobs = list(FX_MAJORS.items())
-        else:
+            jobs.extend(FX_MAJORS.items())
+        if options["metals"]:
+            jobs.extend(METALS.items())
+        if not jobs:
             instrument = (options.get("instrument") or "").strip().lower()
             if not instrument:
-                raise CommandError("Provide --instrument or --fx-majors")
+                raise CommandError(
+                    "Provide --instrument, --fx-majors, and/or --metals "
+                    "(e.g. --instrument xauusd --slug xauusd)"
+                )
             slug = (options.get("slug") or instrument).strip().lower()
             jobs = [(instrument, slug)]
 
@@ -105,7 +108,6 @@ class Command(BaseCommand):
     ) -> None:
         out_dir = data_root / slug / "months"
         out_dir.mkdir(parents=True, exist_ok=True)
-        # dukascopy-node writes files; use folder as volume destination
         cmd = [
             npx or "npx",
             "--yes",

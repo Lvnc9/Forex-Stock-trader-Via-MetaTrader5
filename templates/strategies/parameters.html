@@ -21,7 +21,7 @@
       Save parameters
     </button>
     <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800">Back</a>
-    <a href="{% url 'backtest:create' %}" class="text-sm text-sky-400 hover:text-sky-300">Run backtest →</a>
+    <a href="{% url 'backtest:create' %}?strategy={{ strategy.pk }}" class="text-sm text-sky-400 hover:text-sky-300">Run backtest →</a>
   </div>
 </form>
 {% endblock %}

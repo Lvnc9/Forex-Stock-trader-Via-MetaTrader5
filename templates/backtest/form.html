@@ -1,8 +1,14 @@
 {% extends "layouts/app_shell.html" %}
 
-{% block header %}New backtest{% endblock %}
+{% block header %}New backtest{% if prefill_strategy %} · {{ prefill_strategy.name }}{% endif %}{% endblock %}
 
 {% block content %}
+{% if prefill_strategy %}
+  <p class="mb-4 text-sm text-zinc-400">
+    Pre-filled for strategy
+    <a href="{% if prefill_strategy.is_rule_strategy %}{% url 'strategies:rule_edit' prefill_strategy.pk %}{% elif prefill_strategy.is_custom_python %}{% url 'strategies:custom_edit' prefill_strategy.pk %}{% else %}{% url 'strategies:parameters' prefill_strategy.pk %}{% endif %}" class="text-sky-400 hover:text-sky-300">{{ prefill_strategy.name }}</a>.
+  </p>
+{% endif %}
 <form method="post" class="mx-auto max-w-xl space-y-6">
   {% csrf_token %}
 
@@ -28,7 +34,14 @@
   <p class="text-xs text-zinc-600">
     Data is always M1 on disk. The engine resamples to your primary timeframe (and optional HTF)
     before running the strategy bar-by-bar. Intrabar exits: stop-loss before take-profit when both
-    are touched on the same bar. Long runs stay responsive via Celery + progress polling.
+    are touched on the same bar.
+  </p>
+  <p class="text-xs text-zinc-600">
+    After submit you land on the run page (<code class="text-zinc-500">/backtest/&lt;pk&gt;/</code>) with
+    balances, KPIs, account-balance chart, and trades. Prefer <strong class="font-medium text-zinc-400">H1/H4</strong>
+    for pattern strategies (Head &amp; shoulders). Multi-year M1 is rejected above
+    <code class="text-zinc-500">150k</code> bars. Live progress needs Redis + Celery
+    (<code class="text-zinc-500">CELERY_TASK_ALWAYS_EAGER=False</code>) — see docs/backtestVars.md.
   </p>
 
   <div class="flex gap-3">

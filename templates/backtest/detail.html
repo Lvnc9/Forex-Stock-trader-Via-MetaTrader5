@@ -7,35 +7,75 @@
 {% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <a href="{% url 'backtest:list' %}" class="text-sm text-sky-400 hover:text-sky-300">← All backtests</a>
-  <h2 class="mt-2 text-lg font-semibold text-white">
-    {{ run.strategy.name }} · {{ run.catalog_slug }} · {{ run.timeframe }}{% if run.htf_timeframe %} / {{ run.htf_timeframe }} HTF{% endif %}
-  </h2>
-  <p class="text-sm text-zinc-500">{{ run.start }} → {{ run.end }}</p>
-  <p class="mt-1 text-xs text-zinc-600">
-    Sizing:
-    {% if run.sizing_mode == "fixed_lots" %}
-      fixed lots · {{ run.lot_size }} lot × {{ run.contract_size|floatformat:0 }} contract
-    {% else %}
-      all-in (cash ÷ price)
-    {% endif %}
-    {% if run.parameter_overrides %}
-      · overrides {{ run.parameter_overrides }}
-    {% endif %}
-  </p>
-  {% if metrics.primary_label %}
-    <p class="mt-1 text-xs text-zinc-600">
-      Source M1 → {{ metrics.primary_label }}{% if metrics.htf_label %} (+ {{ metrics.htf_label }} HTF){% endif %}
-      {% if metrics.bar_count %} · {{ metrics.bar_count }} bars{% endif %}
-    </p>
-  {% endif %}
+{# —— Nav —— #}
+<div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+  <a href="{% url 'backtest:list' %}" class="text-sky-400 hover:text-sky-300">← All backtests</a>
+  <a href="{{ strategy_edit_url }}" class="text-sky-400 hover:text-sky-300">← {{ run.strategy.name }}</a>
 </div>
 
-{% if run.status == "pending" or run.status == "running" %}
-  <div
+{# —— 1. Strategy identity —— #}
+<section class="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <p class="text-xs uppercase tracking-wide text-zinc-500">Strategy</p>
+      <h2 class="mt-1 text-xl font-semibold text-white">{{ run.strategy.name }}</h2>
+      <p class="mt-1 font-mono text-xs text-zinc-500">{{ run.strategy.module_path }}</p>
+    </div>
+    <span class="rounded-md border border-zinc-700 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-zinc-300">
+      {{ run.status }}
+    </span>
+  </div>
+
+  <dl class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Catalog</dt>
+      <dd class="mt-1 text-zinc-200">{{ run.catalog_slug }}</dd>
+    </div>
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Timeframe</dt>
+      <dd class="mt-1 text-zinc-200">
+        {{ run.timeframe }}{% if run.htf_timeframe %} <span class="text-zinc-500">/ {{ run.htf_timeframe }} HTF</span>{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Date range</dt>
+      <dd class="mt-1 text-zinc-200">{{ run.start }} → {{ run.end }}</dd>
+    </div>
+    <div>
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Sizing</dt>
+      <dd class="mt-1 text-zinc-200">
+        {% if run.sizing_mode == "fixed_lots" %}
+          Fixed lots · {{ run.lot_size }} × {{ run.contract_size|floatformat:0 }}
+        {% else %}
+          All-in (cash ÷ price)
+        {% endif %}
+      </dd>
+    </div>
+  </dl>
+
+  {% if metrics.primary_label or strategy_params or run.parameter_overrides %}
+    <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-zinc-800 pt-4 text-xs text-zinc-500">
+      {% if metrics.primary_label %}
+        <span>
+          Source M1 → {{ metrics.primary_label }}{% if metrics.htf_label %} (+ {{ metrics.htf_label }} HTF){% endif %}
+          {% if metrics.bar_count %} · {{ metrics.bar_count }} bars{% endif %}
+        </span>
+      {% endif %}
+      {% if strategy_params %}
+        <span>Params {{ strategy_params }}</span>
+      {% endif %}
+      {% if run.parameter_overrides %}
+        <span>Overrides {{ run.parameter_overrides }}</span>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+{# —— 2. Live progress —— #}
+{% if is_in_progress %}
+  <section
     id="backtest-status"
-    class="mb-6 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100"
+    class="mb-8 rounded-xl border border-sky-500/30 bg-sky-500/10 px-5 py-4 text-sm text-sky-100"
     hx-get="{% url 'backtest:status' run.pk %}"
     hx-trigger="every 1.5s"
     hx-swap="none"
@@ -43,15 +83,25 @@
   >
     <div class="flex items-center justify-between gap-3">
       <div>
-        Status: <strong id="bt-status-label">{{ run.status }}</strong>
-        <span id="bt-status-msg" class="text-sky-200/80"> — {{ run.progress_message|default:"working…" }}</span>
+        <p class="text-xs uppercase tracking-wide text-sky-300/80">Progress</p>
+        <p class="mt-1">
+          Status: <strong id="bt-status-label">{{ run.status }}</strong>
+          <span id="bt-status-msg" class="text-sky-200/80"> — {{ run.progress_message|default:"working…" }}</span>
+        </p>
       </div>
-      <span id="bt-status-pct" class="tabular-nums text-sky-200">{{ run.progress_pct|floatformat:0 }}%</span>
+      <span id="bt-status-pct" class="tabular-nums text-lg text-sky-200">{{ run.progress_pct|floatformat:0 }}%</span>
     </div>
-    <div class="mt-3 h-2 overflow-hidden rounded-full bg-sky-950/60">
+    <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-sky-950/60">
       <div id="bt-status-bar" class="h-full rounded-full bg-sky-400 transition-all duration-500" style="width: {{ run.progress_pct|default:0 }}%"></div>
     </div>
-  </div>
+    {% if run.status == "pending" %}
+      <p id="bt-worker-hint" class="mt-3 text-xs text-sky-200/70">
+        If this stays on Queued, start Redis and a Celery worker
+        (<code class="text-sky-100">CELERY_TASK_ALWAYS_EAGER=False</code> — see
+        <a href="#" class="underline decoration-sky-400/50 hover:text-white" onclick="return false;" title="docs/backtestVars.md">docs/backtestVars.md</a>).
+      </p>
+    {% endif %}
+  </section>
   <script>
     window.tbApplyBacktestStatus = function (event) {
       try {
@@ -60,28 +110,48 @@
         const msg = document.getElementById("bt-status-msg");
         const pct = document.getElementById("bt-status-pct");
         const bar = document.getElementById("bt-status-bar");
+        const hint = document.getElementById("bt-worker-hint");
         if (label) label.textContent = data.status;
         if (msg) msg.textContent = data.progress_message ? " — " + data.progress_message : "";
         if (pct) pct.textContent = Math.round(data.progress_pct || 0) + "%";
         if (bar) bar.style.width = (data.progress_pct || 0) + "%";
+        if (hint && data.status !== "pending") hint.classList.add("hidden");
         if (data.done) {
           window.location.reload();
         }
       } catch (e) { /* ignore parse errors during restart */ }
     };
   </script>
-{% else %}
-  <div id="backtest-status" class="hidden"></div>
 {% endif %}
 
+{# —— Failed —— #}
 {% if run.status == "failed" %}
-  <div class="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-    {{ run.error_message|default:"Backtest failed." }}
-  </div>
+  <section class="mb-8 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
+    <p class="text-xs uppercase tracking-wide text-rose-300/80">Run failed</p>
+    <p class="mt-2 whitespace-pre-wrap">{{ run.error_message|default:"Backtest failed." }}</p>
+  </section>
 {% endif %}
 
 {% if run.status == "completed" %}
-  <div class="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  {# —— 3. Balance strip (first-class) —— #}
+  <section class="mb-6 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Initial balance</dt>
+      <dd class="mt-2 text-4xl font-semibold tabular-nums text-zinc-100">{{ run.initial_balance }}</dd>
+    </div>
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+      <dt class="text-xs uppercase tracking-wide text-zinc-500">Final balance</dt>
+      <dd class="mt-2 text-4xl font-semibold tabular-nums {% if balance_up %}text-emerald-400{% else %}text-rose-300{% endif %}">
+        {{ final_balance|default:"—" }}
+      </dd>
+      <p class="mt-2 text-xs text-zinc-500">
+        Net return {{ metrics.net_return_pct }}% · Starting {{ run.initial_balance }} → Final {{ final_balance }}
+      </p>
+    </div>
+  </section>
+
+  {# —— 4. KPIs —— #}
+  <section class="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
       <dt class="text-xs uppercase tracking-wide text-zinc-500">Win rate</dt>
       <dd class="mt-1 text-3xl font-semibold tabular-nums text-emerald-400">{{ metrics.win_rate_pct }}%</dd>
@@ -90,7 +160,6 @@
     <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
       <dt class="text-xs uppercase tracking-wide text-zinc-500">Net return</dt>
       <dd class="mt-1 text-3xl font-semibold tabular-nums text-white">{{ metrics.net_return_pct }}%</dd>
-      <p class="mt-1 text-xs text-zinc-500">Final {{ metrics.final_balance }}</p>
     </div>
     <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
       <dt class="text-xs uppercase tracking-wide text-zinc-500">Profit factor</dt>
@@ -100,18 +169,25 @@
       <dt class="text-xs uppercase tracking-wide text-zinc-500">Max drawdown</dt>
       <dd class="mt-1 text-3xl font-semibold tabular-nums text-rose-300">{{ metrics.max_drawdown_pct }}%</dd>
     </div>
-  </div>
+  </section>
 
+  {# —— 5. Account balance chart —— #}
   <section class="mb-10 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-    <h3 class="mb-4 text-sm font-semibold text-zinc-300">Equity curve</h3>
-    <div class="h-72">
-      <canvas id="equityChart"></canvas>
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <h3 class="text-sm font-semibold text-zinc-200">Account balance</h3>
+        <p class="mt-1 text-xs text-zinc-500">Rising (or falling) equity from <code class="text-zinc-400">equity_curve</code> over the run.</p>
+      </div>
+    </div>
+    <div class="h-80">
+      <canvas id="equityChart" aria-label="Account balance over time"></canvas>
     </div>
   </section>
 
-  {% if trade_rows %}
-    <section>
-      <h3 class="mb-4 text-sm font-semibold text-zinc-300">Trades</h3>
+  {# —— 6. Trades —— #}
+  <section>
+    <h3 class="mb-4 text-sm font-semibold text-zinc-300">Trades</h3>
+    {% if trade_rows %}
       <div class="overflow-hidden rounded-xl border border-zinc-800">
         <table class="min-w-full divide-y divide-zinc-800 text-sm">
           <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -119,6 +195,8 @@
               <th class="px-4 py-3">Entry</th>
               <th class="px-4 py-3">Exit</th>
               <th class="px-4 py-3">Side</th>
+              <th class="px-4 py-3 text-right">Entry px</th>
+              <th class="px-4 py-3 text-right">Exit px</th>
               <th class="px-4 py-3 text-right">PnL</th>
               <th class="px-4 py-3">Reason</th>
             </tr>
@@ -129,6 +207,8 @@
                 <td class="px-4 py-2 text-xs text-zinc-400">{{ t.entry_time }}</td>
                 <td class="px-4 py-2 text-xs text-zinc-400">{{ t.exit_time }}</td>
                 <td class="px-4 py-2 capitalize text-zinc-300">{{ t.side }}</td>
+                <td class="px-4 py-2 text-right tabular-nums text-zinc-400">{{ t.entry_price }}</td>
+                <td class="px-4 py-2 text-right tabular-nums text-zinc-400">{{ t.exit_price }}</td>
                 <td class="px-4 py-2 text-right tabular-nums {% if t.pnl >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
                   {{ t.pnl }}
                 </td>
@@ -138,8 +218,10 @@
           </tbody>
         </table>
       </div>
-    </section>
-  {% endif %}
+    {% else %}
+      <p class="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-6 text-sm text-zinc-500">No closed trades in this run.</p>
+    {% endif %}
+  </section>
 
   <script>
     (function () {
@@ -153,7 +235,7 @@
         data: {
           labels,
           datasets: [{
-            label: "Equity",
+            label: "Account balance",
             data,
             borderColor: "rgb(56, 189, 248)",
             backgroundColor: "rgba(56, 189, 248, 0.08)",
@@ -173,14 +255,31 @@
               grid: { color: "rgba(63,63,70,0.4)" },
             },
             y: {
+              title: { display: true, text: "Balance", color: "#71717a" },
               ticks: { color: "#71717a" },
               grid: { color: "rgba(63,63,70,0.4)" },
             },
           },
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (item) => "Balance: " + item.formattedValue,
+              },
+            },
+          },
         },
       });
     })();
   </script>
+{% elif not is_in_progress and run.status != "failed" %}
+  <p class="text-sm text-zinc-500">Unexpected status: {{ run.status }}</p>
+{% endif %}
+
+{% if run.status == "completed" and celery_eager %}
+  <p class="mt-8 text-xs text-zinc-600">
+    Tip: default mode runs the backtest before this page loads. For a live progress bar, use Redis + Celery
+    (<code class="text-zinc-500">CELERY_TASK_ALWAYS_EAGER=False</code>) — see docs/backtestVars.md.
+  </p>
 {% endif %}
 {% endblock %}

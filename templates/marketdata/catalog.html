@@ -28,6 +28,7 @@
     <table class="min-w-full divide-y divide-zinc-800 text-sm">
       <thead class="bg-zinc-900/80 text-left text-xs uppercase tracking-wide text-zinc-500">
         <tr>
+          <th class="px-4 py-3 font-medium">Instrument</th>
           <th class="px-4 py-3 font-medium">Slug</th>
           <th class="px-4 py-3 font-medium">Dukascopy id</th>
           <th class="px-4 py-3 font-medium">Range (UTC)</th>
@@ -40,7 +41,8 @@
         {% for row in instruments %}
           {% with c=row.catalog %}
             <tr>
-              <td class="px-4 py-3 font-medium text-white">{{ c.slug }}</td>
+              <td class="px-4 py-3 font-medium text-white">{{ row.display_label }}</td>
+              <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ c.slug }}</td>
               <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ c.dukascopy_id|default:"—" }}</td>
               <td class="px-4 py-3 text-zinc-400">
                 {% if c.start and c.end %}

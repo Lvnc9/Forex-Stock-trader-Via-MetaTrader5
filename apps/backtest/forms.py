@@ -4,6 +4,7 @@ from django.core.cache import cache
 from apps.backtest.models import BacktestRun
 from apps.backtest.sweep import MAX_SWEEP_JOBS, parse_param_values
 from apps.marketdata.catalog import scan_data_root
+from apps.marketdata.instruments import catalog_choice_label
 from apps.marketdata.timeframes import (
     HTF_TIMEFRAME_CHOICES,
     TIMEFRAME_CHOICES,
@@ -21,9 +22,10 @@ def _catalog_slug_choices(data_root) -> list[tuple[str, str]]:
     cache_key = f"backtest:catalog_slugs:{data_root}"
     slugs = cache.get(cache_key)
     if slugs is None:
-        slugs = [c.slug for c in scan_data_root(data_root)]
+        catalogs = scan_data_root(data_root)
+        slugs = [(c.slug, catalog_choice_label(c.slug, c.dukascopy_id)) for c in catalogs]
         cache.set(cache_key, slugs, 120)
-    return [(s, s) for s in slugs] or [("", "— no datasets —")]
+    return slugs or [("", "— no datasets —")]
 
 
 class BacktestRunForm(forms.ModelForm):

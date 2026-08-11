@@ -98,6 +98,12 @@ AGENT_HEARTBEAT_TTL_SECONDS = 90
 TRADEBOT_BACKTEST_CACHE = env.bool("TRADEBOT_BACKTEST_CACHE", default=True)
 TRADEBOT_BACKTEST_LOAD_WORKERS = env.int("TRADEBOT_BACKTEST_LOAD_WORKERS", default=4)
 TRADEBOT_BACKTEST_WORKERS = env.int("TRADEBOT_BACKTEST_WORKERS", default=0)  # 0 = auto (cpu-1)
+# Allow multi-year M1 (~1.4M bars). Set lower to fail-fast on huge accidental ranges.
+TRADEBOT_MAX_BACKTEST_BARS = env.int("TRADEBOT_MAX_BACKTEST_BARS", default=2_000_000)
+# Wall-clock timeout seconds (SIGALRM main thread only). 0 = no alarm timeout.
+TRADEBOT_BACKTEST_TIMEOUT_SECONDS = env.int("TRADEBOT_BACKTEST_TIMEOUT_SECONDS", default=0)
+# Orphan pending/running runs older than this many minutes → failed.
+TRADEBOT_ORPHAN_RUNNING_MINUTES = env.int("TRADEBOT_ORPHAN_RUNNING_MINUTES", default=120)
 
 # Lightweight local cache for catalog scans / short-lived UI bits
 CACHES = {

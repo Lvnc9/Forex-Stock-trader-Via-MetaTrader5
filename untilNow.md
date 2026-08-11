@@ -25,7 +25,9 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | **G3 — Parquet bar cache** | **Done** |
 | **G4 — Ops handoff docs** | **Done** (checklist only; human smoke not executed here) |
 | **Library SL/TP knobs** | **Done** (on `main`) |
-| **Automated smoke (HTF + library SL/TP → LiveWorker)** | **Done** (on `main`) |
+| **B0 — Backtest UX pre-fill** | **Done** | `?strategy=` pre-fill, detail KPIs, `docs/backtestVars.md` |
+| **Backtest results experience** | **Done** | Full `/backtest/<pk>/` page: identity, progress, balances, chart, trades |
+| **Stuck backtest fix** | **Done** | H&S `prepare()` once; max-bars / timeout / orphan cleanup |
 
 ## Phase G (this branch)
 
@@ -90,44 +92,26 @@ Login is at `/login/`.
 ## Tests run
 
 ```bash
-python manage.py test apps.backtest apps.marketdata.tests.test_loader_catalog
-python manage.py test apps.strategies.tests.test_library_sl_tp apps.strategies.tests.test_live_worker_sl_tp_smoke
+python manage.py fail_orphaned_backtests --all-stuck   # clear hung runs
+python manage.py test apps.backtest apps.strategies.tests.test_head_shoulders
 ```
 
-## Last commits (this branch tip)
+(36 OK — H&S prepare once, max-bars guard, orphan cleanup, create→detail.)
 
-- `838bea1` — H&S detector harness + Django strategy wiring
-- `fc2eec1` — H&S curriculum pack + spec
-- `d76bd77` — G4: Windows smoke docs + Phase G closeout
-- `fc05b20` — LiveWorker library SL/TP smoke path (from `main`)
+## Stuck backtest fix (this session)
 
-## H&S curriculum (side track)
+Root cause: Head & shoulders called `detect_on_bars` on **every** bar over ~1.4M XAUUSD M1 bars → never finished; detail stayed `running` with empty metrics.
 
-| Agent | Status | Path |
-| ----- | ------ | ---- |
-| 1 — diagnosis + spec | Done | `hs-curriculum/` |
-| 2 — labels + harness | Done | `hs-data/` (harness, schema, synthetic) |
-| **3 — detector + Plan 1** | **Done** | `hs-data/detector/`, `docs/HS-ELEMENTS.md`, `docs/HS-FAILURES.md` |
+Fixes:
+- `BaseStrategy.prepare()` + `SignalEngine` calls it once
+- H&S detects once in `prepare`, O(1) lookup in `on_bar`
+- `MAX_BACKTEST_BARS=150_000` fail-fast; 15m timeout; orphan cleanup
+- `python manage.py fail_orphaned_backtests --all-stuck`
 
-**Plan 1 deliverables:** element/failure docs; FX bar export (`bars/export_bars.py`); filled label corpus generator (`labels/generate_corpus.py` — 52 true + 32 hard neg); Python detector + CLI; harness E5 premature entry + TP2 at k×H.
-
-**Validation loop:**
-
-```bash
-cd hs-data
-python bars/export_bars.py --out-dir bars
-python labels/generate_corpus.py
-python -m synthetic.generate_synthetic --out synthetic/out
-python -m detector.run --bars bars/EURUSD_H1_corpus.csv --symbol EURUSD --timeframe H1 --out reports/corpus_detections.json
-python -m harness.evaluate --bars-dir bars --labels labels/filled --detections reports/corpus_detections.json --out reports/run_corpus
-```
-
-Corpus gates: recall/precision 1.0, E5 premature 0.0. TP1 hit rate on auto-corpus remains low — re-measure on hand labels over real `bars/*.csv`.
-
-Smoke: `cd hs-data && python -m unittest harness.tests.test_harness_smoke -v` (2 OK).
+**Use H1/H4 for H&S**, not multi-year M1.
 
 ## Recommended next work
 
-1. **Hand-label** 50+ true H&S on real yfinance/MT5 bars in `labels/filled/`; re-run detector + harness for production R2/T2 calibration.
-2. On Windows: run **both** smoke sections in `agent/README.md` (HTF deploy + library SL/TP) and paste evidence into the next handoff.
-3. Merge PR #7; then optional product work (hedge/multi-position, walk-forward UI) only if explicitly requested.
+1. Restart `runserver`, run H&S on **XAUUSD H1** (short range) → confirm `/backtest/<pk>/` shows balances + chart.
+2. Optional live progress: Redis + Celery with `CELERY_TASK_ALWAYS_EAGER=False`.
+3. Windows MT5 smoke when ready.

@@ -3,6 +3,7 @@ from django import forms
 from apps.backtest.models import BacktestRun
 from apps.brokers.models import TradingAgent
 from apps.marketdata.catalog import scan_data_root
+from apps.marketdata.instruments import catalog_choice_label
 from apps.marketdata.models import SymbolMap
 from apps.marketdata.timeframes import (
     HTF_TIMEFRAME_CHOICES,
@@ -47,9 +48,10 @@ class DeploymentDraftForm(forms.ModelForm):
         self.fields["strategy"].queryset = Strategy.objects.all()
         self.fields["agent"].queryset = TradingAgent.objects.all()
         self.fields["mt5_symbol"].required = False
-        slugs = [c.slug for c in scan_data_root(data_root)] if data_root else []
+        catalogs = scan_data_root(data_root) if data_root else []
         self.fields["catalog_slug"] = forms.ChoiceField(
-            choices=[(s, s) for s in slugs] or [("", "—")],
+            choices=[(c.slug, catalog_choice_label(c.slug, c.dukascopy_id)) for c in catalogs]
+            or [("", "—")],
             widget=forms.Select(attrs={"class": "tb-input"}),
         )
         self.fields["timeframe"] = forms.ChoiceField(

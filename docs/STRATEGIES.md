@@ -52,6 +52,7 @@ The page has four areas:
 | **MA crossover** | Long when fast SMA crosses above slow; short on cross below | `fast_period`, `slow_period` |
 | **RSI reversal** | Long when RSI leaves oversold upward; short when leaving overbought | `rsi_period`, `oversold`, `overbought` |
 | **Range breakout** | Long above prior range high; short below range low | `lookback`, `buffer_pct` |
+| **Head & shoulders** | Top → short on neckline confirm; inverse → long; SL at RS ± ATR buffer, TP at 0.5×H (or `tp2_k×H`) | `swing_L_short`, `swing_L_medium`, `min_score`, `prior_trend_bars`, `entry_mode`, `tp_target`, `direction_filter` |
 
 ### Steps
 
@@ -59,7 +60,7 @@ The page has four areas:
 2. Under **Library (Python)**, click **Configure parameters →** on a card.
 3. That creates (or opens) a saved strategy row and takes you to the **Parameters** form.
 4. Adjust numbers → **Save parameters**.
-5. Optionally click **Run backtest →**.
+5. Click **Run backtest →** — opens the backtest form with this strategy pre-selected (`/backtest/new/?strategy=<pk>`). Submit to land on `/backtest/<pk>/` with balance KPIs, equity chart, and trades. See [`backtestVars.md`](backtestVars.md).
 
 Library strategies use typed parameter forms (min/max enforced). Logic stays in Python under `apps/strategies/library/`.
 
@@ -317,6 +318,7 @@ python manage.py runserver
 | **MA crossover** | ورود خرید با عبور میانگین سریع از بالای کند؛ فروش با عبور به پایین | `fast_period`, `slow_period` |
 | **RSI reversal** | خرید وقتی RSI از اشباع فروش بالا می‌آید؛ فروش وقتی از اشباع خرید پایین می‌آید | `rsi_period`, `oversold`, `overbought` |
 | **Range breakout** | خرید بالای سقف رنج قبلی؛ فروش زیر کف رنج | `lookback`, `buffer_pct` |
+| **Head & shoulders** | الگوی سر و شانه — تایید خط گردن؛ حد ضرر/سود بر اساس H | `swing_L_short`, `swing_L_medium`, `min_score`, `prior_trend_bars`, `entry_mode`, `tp_target`, `direction_filter` |
 
 ### مراحل
 

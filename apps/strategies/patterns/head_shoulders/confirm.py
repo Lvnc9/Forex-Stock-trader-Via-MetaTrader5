@@ -41,9 +41,10 @@ def find_confirmation(
                     return Confirmation(i, close, "close_beyond_neckline")
             elif close < a2_p:
                 return Confirmation(i, close, "close_beyond_right_armpit")
-        elif nk in ("down", "flat"):
-            if close > nl:
-                return Confirmation(i, close, "close_beyond_neckline")
-        elif close > a2_p:
-            return Confirmation(i, close, "close_beyond_right_armpit")
+        else:
+            if nk in ("down", "flat"):
+                if close > nl:
+                    return Confirmation(i, close, "close_beyond_neckline")
+            elif close > a2_p:
+                return Confirmation(i, close, "close_beyond_right_armpit")
     return None

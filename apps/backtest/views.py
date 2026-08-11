@@ -5,14 +5,25 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, TemplateView
 
+from apps.backtest.defaults import backtest_form_defaults
 from apps.backtest.forms import BacktestRunForm, ParamSweepForm
 from apps.backtest.models import BacktestRun
+from apps.backtest.progress import fail_orphaned_runs
 from apps.backtest.tasks import enqueue_backtest, enqueue_sweep
+from apps.strategies.models import Strategy
+
+
+def _strategy_edit_url(strategy: Strategy) -> str:
+    if strategy.is_rule_strategy:
+        return reverse("strategies:rule_edit", kwargs={"pk": strategy.pk})
+    if strategy.is_custom_python:
+        return reverse("strategies:custom_edit", kwargs={"pk": strategy.pk})
+    return reverse("strategies:parameters", kwargs={"pk": strategy.pk})
 
 
 @method_decorator(login_required, name="dispatch")
@@ -21,6 +32,10 @@ class BacktestListView(ListView):
     template_name = "backtest/list.html"
     context_object_name = "runs"
     paginate_by = 20
+
+    def get(self, request, *args, **kwargs):
+        fail_orphaned_runs()
+        return super().get(request, *args, **kwargs)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -35,7 +50,32 @@ class BacktestCreateView(CreateView):
         kwargs["data_root"] = settings.TRADEBOT_DATA_ROOT
         return kwargs
 
+    def get_initial(self):
+        initial = super().get_initial()
+        strategy_pk = self.request.GET.get("strategy")
+        if strategy_pk:
+            try:
+                strategy = Strategy.objects.get(pk=int(strategy_pk))
+            except (ValueError, Strategy.DoesNotExist):
+                pass
+            else:
+                initial["strategy"] = strategy.pk
+        initial.setdefault("initial_balance", BacktestRun._meta.get_field("initial_balance").default)
+        initial.update(backtest_form_defaults(settings.TRADEBOT_DATA_ROOT))
+        return initial
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        strategy_pk = self.request.GET.get("strategy")
+        if strategy_pk:
+            try:
+                ctx["prefill_strategy"] = Strategy.objects.get(pk=int(strategy_pk))
+            except (ValueError, Strategy.DoesNotExist):
+                pass
+        return ctx
+
     def form_valid(self, form):
+        fail_orphaned_runs()
         self.object = form.save(commit=False)
         self.object.status = BacktestRun.Status.PENDING
         self.object.progress_pct = 0.0
@@ -102,13 +142,28 @@ class BacktestDetailView(DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         run = self.object
+        metrics = run.metrics or {}
         curve = run.equity_curve or []
         if len(curve) > 500:
             step = max(len(curve) // 500, 1)
             curve = curve[::step]
+            if curve[-1] is not run.equity_curve[-1]:
+                curve.append(run.equity_curve[-1])
         ctx["equity_chart_json"] = json.dumps(curve)
-        ctx["metrics"] = run.metrics or {}
+        ctx["metrics"] = metrics
         ctx["trade_rows"] = run.trades or []
+        ctx["final_balance"] = metrics.get("final_balance")
+        try:
+            ctx["balance_up"] = float(ctx["final_balance"]) >= float(run.initial_balance)
+        except (TypeError, ValueError):
+            ctx["balance_up"] = True
+        ctx["strategy_params"] = dict(run.strategy.parameters or {})
+        ctx["strategy_edit_url"] = _strategy_edit_url(run.strategy)
+        ctx["celery_eager"] = bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", True))
+        ctx["is_in_progress"] = run.status in (
+            BacktestRun.Status.PENDING,
+            BacktestRun.Status.RUNNING,
+        )
         return ctx
 
 
@@ -118,6 +173,7 @@ class BacktestStatusView(View):
 
     def get(self, request, pk: int):
         run = get_object_or_404(BacktestRun, pk=pk)
+        metrics = run.metrics or {}
         return JsonResponse(
             {
                 "id": run.pk,
@@ -126,6 +182,8 @@ class BacktestStatusView(View):
                 "progress_message": run.progress_message,
                 "error_message": run.error_message,
                 "win_rate_pct": run.win_rate_pct,
+                "initial_balance": float(run.initial_balance),
+                "final_balance": metrics.get("final_balance"),
                 "done": run.status
                 in (BacktestRun.Status.COMPLETED, BacktestRun.Status.FAILED),
             }

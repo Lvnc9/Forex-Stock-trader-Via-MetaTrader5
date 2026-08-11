@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+import pandas as pd
+
 from apps.strategies.context import BarContext
 from apps.strategies.signals import Signal
 
@@ -40,6 +42,18 @@ class BaseStrategy:
             if "max" in spec:
                 validated[key] = min(spec["max"], validated[key])
         return validated
+
+    def prepare(
+        self,
+        bars: pd.DataFrame,
+        *,
+        htf_bars: pd.DataFrame | None = None,
+    ) -> None:
+        """Optional one-shot precompute before the bar loop (backtest + batch).
+
+        Pattern strategies (e.g. H&S) should detect once here and look up signals
+        in ``on_bar``. Default is a no-op so MA/RSI strategies stay unchanged.
+        """
 
     def on_bar(self, ctx: BarContext) -> Signal | None:
         raise NotImplementedError

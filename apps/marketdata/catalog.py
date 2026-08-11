@@ -7,6 +7,14 @@ from pathlib import Path
 INSTRUMENT_SKIP_DIRS = {"_work", "_tmp", "_histdata_tmp", "node_modules", "months", ".cache"}
 
 
+def _skip_instrument_dir(name: str) -> bool:
+    if name in INSTRUMENT_SKIP_DIRS:
+        return True
+    if name.startswith("HISTDATA_"):
+        return True
+    return False
+
+
 @dataclass(frozen=True)
 class CatalogFile:
     path: Path
@@ -136,7 +144,7 @@ def scan_data_root(data_root: Path) -> list[InstrumentCatalog]:
 
     catalogs: list[InstrumentCatalog] = []
     for entry in sorted(data_root.iterdir()):
-        if not entry.is_dir() or entry.name in INSTRUMENT_SKIP_DIRS:
+        if not entry.is_dir() or _skip_instrument_dir(entry.name):
             continue
         files = _collect_csv_files(entry)
         if not files:
