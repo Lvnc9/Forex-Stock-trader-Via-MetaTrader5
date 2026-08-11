@@ -1,0 +1,20 @@
+{
+  "meta_id": "EXAMPLE_rendered_failure_window",
+  "source_kind": "rendered_bars",
+  "bars_file": "EURUSD_H1.csv",
+  "symbol": "EURUSD",
+  "timeframe": "H1",
+  "start_bar_index": 0,
+  "end_bar_index": 120,
+  "n_bars": 120,
+  "image_relpath": "images/rendered/EXAMPLE_rendered_failure_window.png",
+  "created_at": "2026-08-11T00:00:00+00:00",
+  "label_hints": {
+    "structure_ok": true,
+    "neckline_confirm_bar": 85,
+    "failure_bar": 98,
+    "failure_level": "head",
+    "outcome": "failure_success"
+  },
+  "notes": "ILLUSTRATIVE metadata template — replace indices after rendering real bars. Do not treat as gold."
+}

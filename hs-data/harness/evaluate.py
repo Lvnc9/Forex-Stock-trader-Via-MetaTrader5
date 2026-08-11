@@ -15,6 +15,7 @@ from harness.labels import load_labels
 from harness.match import match_detections
 from harness.metrics import (
     compute_detection_metrics,
+    compute_failure_gates,
     compute_premature_entry_rate,
     compute_tp_rates,
     detector_premature_rate,
@@ -80,11 +81,23 @@ def _md_scorecard(card: dict[str, Any]) -> str:
     ]
     e5 = card.get("premature_entry_metrics", {})
     det_prem = card.get("detector_premature_metrics", {})
+    fail = card.get("failure_metrics") or {}
     lines += [
         f"- premature_entry_rate (labeled tests): **{pct(e5.get('premature_entry_rate'))}** "
         f"({e5.get('premature_violations', 0)}/{e5.get('n_premature_test_labels', 0)})",
         f"- detector premature rate (all dets): **{pct(det_prem.get('premature_rate'))}** "
         f"({det_prem.get('premature_count', 0)}/{det_prem.get('n_detections_with_entry', 0)})",
+        "",
+        "## Failure / bust gates",
+        "",
+        f"| Metric | Value |",
+        f"|--------|-------|",
+        f"| Failure labels | {fail.get('n_failure_labels', 0)} |",
+        f"| Failure detections | {fail.get('n_failure_detections', 0)} |",
+        f"| Failure precision | {pct(fail.get('precision'))} |",
+        f"| Failure recall | {pct(fail.get('recall'))} |",
+        f"| Premature failure rate | {pct(fail.get('premature_failure_rate'))} |",
+        f"| Classic leak count | {fail.get('classic_leak_count', 0)} |",
         "",
         "## Hard-negative false accepts",
         "",
@@ -104,6 +117,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--labels", type=Path, required=True, help="Label file or directory")
     p.add_argument("--detections", type=Path, required=True, help="Detector CSV/JSON export")
     p.add_argument("--entry-mode", choices=["A", "B"], default="A")
+    p.add_argument(
+        "--trade-mode",
+        choices=["classic", "failure"],
+        default="classic",
+        help="Scorecard annotation; failure detections should set trade_kind=failure",
+    )
     p.add_argument("--outcome-bars", type=int, default=50)
     p.add_argument("--match-tol-bars", type=int, default=5)
     p.add_argument("--tp2-mult-h", type=float, default=0.51, help="TP2 target as k×H (spec default 0.51)")
@@ -176,10 +195,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         labels, detections, match_tol_bars=args.match_tol_bars
     )
     det_premature = detector_premature_rate(detections)
+    failure_metrics = compute_failure_gates(
+        labels, detections, match_tol_bars=args.match_tol_bars
+    )
 
     card = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "entry_mode": args.entry_mode,
+        "trade_mode": getattr(args, "trade_mode", "classic"),
         "match_tol_bars": args.match_tol_bars,
         "outcome_bars": args.outcome_bars,
         "tp2_mult_h": args.tp2_mult_h,
@@ -190,8 +213,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "tp_metrics": tp_metrics,
         "premature_entry_metrics": premature_metrics,
         "detector_premature_metrics": det_premature,
+        "failure_metrics": failure_metrics,
         "spec_ref": "hs-curriculum/hs-spec.v1.json",
         "l0_ref": "hs-curriculum/L0-diagnosis.md",
+        "failure_docs_ref": "docs/HS-FAILURE-TRADE.md",
     }
     return {
         "scorecard": card,

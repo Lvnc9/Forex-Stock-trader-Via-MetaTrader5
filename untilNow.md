@@ -28,30 +28,37 @@ Handoff for the **next agent chat**. Read at start; update at end.
 | **B0 — Backtest UX pre-fill** | **Done** | `?strategy=` pre-fill, detail KPIs, `docs/backtestVars.md` |
 | **Backtest results experience** | **Done** | Full `/backtest/<pk>/` page: identity, progress, balances, chart, trades |
 | **Stuck backtest fix** | **Done** | H&S `prepare()` once; max-bars / timeout / orphan cleanup |
+| **H&S failure / bust trading** | **Done** | Failure-only strategy + spec + harness gates + image research pack |
 
-## Phase G (this branch)
+## H&S failure (this session)
 
-| Item | What |
-| ---- | ---- |
-| G1 sizing | `SimulatedBroker` `all_in` / `fixed_lots`; `BacktestRun.lot_size` + `contract_size`; migration `0004` |
-| G2 sweeps | `apps/backtest/sweep.py` + `run_jobs_multiprocess`; UI `/backtest/sweep/`; `run_param_sweep` command; Celery `backtest.sweep` |
-| G3 cache | `loader.py` Parquet via `pyarrow`; legacy `.pkl` migrates once then deleted |
-| G4 docs | Expanded Windows demo smoke checklist in `agent/README.md` |
+Product rule: **positions only on head-and-shoulders failure** (Bulkowski bust), never classic neckline reversal.
 
-## Smoke path (CI / no Windows MT5)
+| Deliverable | Path |
+| ----------- | ---- |
+| Distill + rules | [`docs/HS-FAILURE-TRADE.md`](docs/HS-FAILURE-TRADE.md) |
+| Spec `failure` block | [`hs-curriculum/hs-spec.v1.json`](hs-curriculum/hs-spec.v1.json) |
+| Bust watcher | [`apps/strategies/patterns/head_shoulders/failure.py`](apps/strategies/patterns/head_shoulders/failure.py) |
+| Library strategy | slug `head_and_shoulders_failure` |
+| Image research tools | [`hs-data/images/`](hs-data/images/) (Pillow render/rank/download; bulk PNGs gitignored) |
+| Harness failure gates | `compute_failure_gates` in [`hs-data/harness/metrics.py`](hs-data/harness/metrics.py) |
 
-| Item | What |
-| ---- | ---- |
-| LiveWorker SL/TP | `test_live_worker_sl_tp_smoke` — adapter receives `stop_loss` / `take_profit` |
-| Docs | `agent/README.md` — HTF deploy + library SL/TP Windows smoke steps + offline test command |
-| Suite | Full `python manage.py test` green on `main` (65+ tests) |
+**v1 entry:** after classic confirm, if adverse **close** ≤ `max_bust_atr×ATR` and price **closes beyond head** → enter opposite of classic (failed top → long).
+
+```bash
+python manage.py seed_library_strategies   # picks up head_and_shoulders_failure
+python manage.py test apps.strategies.tests.test_head_shoulders_failure
+# Detector export (failure mode):
+cd hs-data && PYTHONPATH=..:. python -m detector.run --bars ... --trade-mode failure --out reports/fail.json
+```
 
 ## Left to do (optional)
 
 | Item | Notes |
 | ---- | ----- |
 | **Human Windows MT5 smoke** | Follow both smoke sections in `agent/README.md` on a demo account; record evidence before claiming pass |
-| **H&S hand-label calibration** | 50+ true H&S on real FX bars; re-run detector + harness for R2/T2 gates |
+| **H&S failure gold labels** | Hand-label ≥40 true failures + ≥40 hard negs on real FX H1/H4; run harness failure gates (precision ≥0.45, recall ≥0.55) |
+| **H&S classic hand-label calibration** | Still useful for structure recall; classic strategy remains in registry but product default is failure-only |
 | Hedge / multi-position MT5 | Not supported (v1 is netting-style flip) |
 | Deeper nested exprs | Builder supports one-level pct_offset/arith only |
 | Tick-mode intrabar | Optional later; SL-before-TP rule remains |
@@ -61,7 +68,7 @@ Handoff for the **next agent chat**. Read at start; update at end.
 
 ```bash
 cd tradeBot && source venv/bin/activate
-pip install -r requirements.txt   # includes pyarrow
+pip install -r requirements.txt   # includes pyarrow, Pillow
 python manage.py migrate          # through backtest.0005_parameter_overrides
 python manage.py seed_library_strategies
 python manage.py seed_rule_templates
@@ -78,40 +85,18 @@ celery -A config worker -l info --concurrency=4
 python manage.py runserver
 ```
 
-**Param sweep (CLI):**
-
-```bash
-python manage.py run_param_sweep \
-  --strategy <slug> --catalog <slug> \
-  --start YYYY-MM-DD --end YYYY-MM-DD \
-  --param fast_period --values 5,10,15 --sync
-```
-
 Login is at `/login/`.
 
 ## Tests run
 
 ```bash
-python manage.py fail_orphaned_backtests --all-stuck   # clear hung runs
-python manage.py test apps.backtest apps.strategies.tests.test_head_shoulders
+python manage.py test apps.strategies.tests.test_head_shoulders_failure apps.strategies.tests.test_head_shoulders
 ```
 
-(36 OK — H&S prepare once, max-bars guard, orphan cleanup, create→detail.)
-
-## Stuck backtest fix (this session)
-
-Root cause: Head & shoulders called `detect_on_bars` on **every** bar over ~1.4M XAUUSD M1 bars → never finished; detail stayed `running` with empty metrics.
-
-Fixes:
-- `BaseStrategy.prepare()` + `SignalEngine` calls it once
-- H&S detects once in `prepare`, O(1) lookup in `on_bar`
-- `TRADEBOT_MAX_BACKTEST_BARS=2_000_000` (allows ~1.4M M1); timeout off by default; orphan 120m
-- `python manage.py fail_orphaned_backtests --all-stuck`
-
-**Use H1/H4 for H&S**, not multi-year M1.
+(13 OK — failure watcher, failure strategy long-on-busted-top, classic H&S regression.)
 
 ## Recommended next work
 
-1. Restart `runserver`, run H&S on **XAUUSD H1** (short range) → confirm `/backtest/<pk>/` shows balances + chart.
-2. Optional live progress: Redis + Celery with `CELERY_TASK_ALWAYS_EAGER=False`.
+1. Seed strategies, backtest **`head_and_shoulders_failure`** on **XAUUSD H1** (short range) — confirm only failure entries (long after failed tops / short after failed inverses).
+2. Hand-label failure gold set on real FX bars (`hs-data/images/LABELING_FAILURE.md`); calibrate `max_bust_atr`.
 3. Windows MT5 smoke when ready.

@@ -134,15 +134,100 @@ def compute_premature_entry_rate(
 
 
 def detector_premature_rate(detections: list[dict[str, Any]]) -> dict[str, Any]:
-    """All detections where entry precedes confirmation."""
-    considered = [d for d in detections if d.get("entry_bar_index") is not None and d.get("confirmation_bar_index") is not None]
-    bad = sum(
-        1
-        for d in considered
-        if int(d["entry_bar_index"]) < int(d["confirmation_bar_index"])
-    )
+    """All detections where entry precedes confirmation (or failure reclaim)."""
+    considered = [
+        d
+        for d in detections
+        if d.get("entry_bar_index") is not None and d.get("confirmation_bar_index") is not None
+    ]
+    bad = 0
+    for d in considered:
+        entry_i = int(d["entry_bar_index"])
+        confirm_i = int(d["confirmation_bar_index"])
+        if d.get("trade_kind") == "failure":
+            if entry_i <= confirm_i:
+                bad += 1
+                continue
+            fail_i = d.get("failure_bar_index")
+            if fail_i is not None and entry_i < int(fail_i):
+                bad += 1
+        elif entry_i < confirm_i:
+            bad += 1
     return {
         "n_detections_with_entry": len(considered),
         "premature_count": bad,
         "premature_rate": _safe_div(bad, len(considered)),
+    }
+
+
+def compute_failure_gates(
+    labels: list[dict[str, Any]],
+    detections: list[dict[str, Any]],
+    *,
+    match_tol_bars: int,
+) -> dict[str, Any]:
+    """
+    Failure-only gates vs trade_kind=failure labels.
+    classic_leak_count should be 0 when evaluating a failure-mode export.
+    """
+    fail_labels = [
+        lb
+        for lb in labels
+        if not lb.get("hard_negative") and lb.get("trade_kind") == "failure"
+    ]
+    fail_dets = [d for d in detections if d.get("trade_kind") == "failure"]
+    classic_leaks = [d for d in detections if d.get("trade_kind") == "classic"]
+
+    used: set[str] = set()
+    tp = 0
+    for lb in fail_labels:
+        best = None
+        best_delta = None
+        for d in fail_dets:
+            if d["detection_id"] in used:
+                continue
+            if d["symbol"].upper() != str(lb["symbol"]).upper():
+                continue
+            if d["timeframe"].upper() != str(lb["timeframe"]).upper():
+                continue
+            if d["direction"] != lb["direction"]:
+                continue
+            delta = abs(int(d["head_bar_index"]) - int(lb["head_bar_index"]))
+            if delta > match_tol_bars:
+                continue
+            if best is None or delta < best_delta:  # type: ignore[operator]
+                best = d
+                best_delta = delta
+        if best is not None:
+            used.add(best["detection_id"])
+            tp += 1
+    fp = max(0, len(fail_dets) - tp)
+    fn = max(0, len(fail_labels) - tp)
+    precision = _safe_div(tp, tp + fp)
+    recall = _safe_div(tp, tp + fn)
+
+    premature = sum(
+        1
+        for d in fail_dets
+        if int(d["entry_bar_index"]) <= int(d["confirmation_bar_index"])
+    )
+
+    return {
+        "n_failure_labels": len(fail_labels),
+        "n_failure_detections": len(fail_dets),
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+        "premature_failure_count": premature,
+        "premature_failure_rate": _safe_div(premature, len(fail_dets)),
+        "classic_leak_count": len(classic_leaks),
+        "classic_false_trade_rate": _safe_div(len(classic_leaks), max(len(detections), 1)),
+        "gates": {
+            "precision_floor": 0.45,
+            "recall_floor": 0.55,
+            "premature_max": 0.10,
+            "classic_leak_max": 0.0,
+        },
     }

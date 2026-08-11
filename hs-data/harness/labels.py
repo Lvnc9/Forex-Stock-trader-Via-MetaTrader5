@@ -95,6 +95,12 @@ def load_labels(path: Path) -> list[dict[str, Any]]:
 
 
 def expected_entry_bar(label: dict[str, Any], entry_mode: str) -> int | None:
+    if label.get("trade_kind") == "failure":
+        if label.get("failure_bar_index") is not None:
+            return int(label["failure_bar_index"])
+        if label.get("entry_bar_index") is not None:
+            return int(label["entry_bar_index"])
+        return None
     mode = label.get("entry_mode") or entry_mode
     if label.get("entry_bar_index") is not None:
         return int(label["entry_bar_index"])

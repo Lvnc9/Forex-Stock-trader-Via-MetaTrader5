@@ -86,7 +86,60 @@
         "retest_level": "confirmation_level"
       }
     },
-    "forbidden": ["enter_on_RS_pivot_alone", "enter_on_intrabar_pierce_without_close"]
+    "forbidden": ["enter_on_RS_pivot_alone", "enter_on_intrabar_pierce_without_close"],
+    "classic_trade": {
+      "value": false,
+      "note": "Product default: do not take classic neckline reversal trades; use failure block."
+    }
+  },
+  "failure": {
+    "trade": true,
+    "require_prior_confirm": true,
+    "entry_level": {
+      "value": "head",
+      "enum": ["head", "rs", "neckline"],
+      "note": "v1 live default is head (Bulkowski busted). rs/neckline are research A/B only."
+    },
+    "max_bust_atr": {
+      "value": 1.5,
+      "tunable": true,
+      "note": "FX stand-in for Bulkowski stock ≤10% adverse from breakout price."
+    },
+    "max_watch_bars": {
+      "value": 80,
+      "tunable": true,
+      "note": "Give up watching for bust after this many bars past confirm."
+    },
+    "enter_next_open": { "value": false, "tunable": true },
+    "top": {
+      "precondition": "classic_confirm_close_below_neckline_or_right_armpit",
+      "dead_if": "adverse_from_breakout_gt_max_bust_atr_ATR_before_failure",
+      "failure_confirm": "close_above_head_high",
+      "action": "ENTER_LONG"
+    },
+    "inverse": {
+      "precondition": "classic_confirm_close_above_neckline_or_right_armpit",
+      "dead_if": "adverse_from_breakout_gt_max_bust_atr_ATR_before_failure",
+      "failure_confirm": "close_below_head_low",
+      "action": "ENTER_SHORT"
+    },
+    "SL": {
+      "top_failure_long": "below_failed_breakdown_extreme - sl_atr_buffer * ATR",
+      "inverse_failure_short": "above_failed_breakout_extreme + sl_atr_buffer * ATR",
+      "failed_extreme": "min_low_or_max_high_from_confirm_through_entry"
+    },
+    "TP": {
+      "staging_required": true,
+      "direction": "opposite_of_classic",
+      "TP1": { "mult_H": 0.5, "tunable": true },
+      "TP2": { "mult_H": 0.51, "tunable": true },
+      "measure": "project_H_from_failure_entry_in_continuation_direction"
+    },
+    "research_variants": {
+      "rs": "close beyond right shoulder (StockGro / WhaleEmpire checklist)",
+      "neckline": "close back beyond neckline (Daily Price Action reclaim)"
+    },
+    "docs_ref": "docs/HS-FAILURE-TRADE.md"
   },
   "stops_targets": {
     "measure_H": "abs(head_extreme - neckline_price_at_head_time)",
@@ -167,7 +220,14 @@
       "tp1_hit",
       "tp2_hit",
       "false_positive",
-      "notes"
+      "notes",
+      "trade_kind",
+      "failure_level",
+      "failure_bar_index",
+      "failure_price",
+      "failed_extreme_price",
+      "max_adverse_atr",
+      "outcome_class"
     ],
     "enums": {
       "direction": ["top", "inverse"],
@@ -176,7 +236,10 @@
         "close_beyond_right_armpit"
       ],
       "entry_mode": ["A", "B"],
-      "label_quality": ["gold", "silver", "reject"]
+      "label_quality": ["gold", "silver", "reject"],
+      "trade_kind": ["classic", "failure", "none"],
+      "failure_level": ["head", "rs", "neckline"],
+      "outcome_class": ["failure_success", "classic_follow_through", "ambiguous", "invalid_structure"]
     }
   }
 }

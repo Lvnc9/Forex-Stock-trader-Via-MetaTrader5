@@ -33,8 +33,16 @@ def detect_on_bars(
     spec: HSSpec | None = None,
     *,
     entry_mode: str = "A",
+    trade_mode: str = "classic",
 ) -> list[dict[str, Any]]:
-    return _detect_on_bars(_to_pattern_bars(bars), symbol, timeframe, spec, entry_mode=entry_mode)
+    return _detect_on_bars(
+        _to_pattern_bars(bars),
+        symbol,
+        timeframe,
+        spec,
+        entry_mode=entry_mode,
+        trade_mode=trade_mode,
+    )
 
 
 def detect_patterns(
@@ -44,11 +52,14 @@ def detect_patterns(
     *,
     spec: HSSpec | None = None,
     entry_mode: str = "A",
+    trade_mode: str = "classic",
     bars_file: str | None = None,
 ) -> list[dict[str, Any]]:
     path = bars_dir / (bars_file or f"{symbol}_{timeframe}.csv")
     bars = load_bars_csv(path)
-    return detect_on_bars(bars, symbol, timeframe, spec, entry_mode=entry_mode)
+    return detect_on_bars(
+        bars, symbol, timeframe, spec, entry_mode=entry_mode, trade_mode=trade_mode
+    )
 
 
 __all__ = ["detect_on_bars", "detect_patterns", "HSSpec", "get_spec"]

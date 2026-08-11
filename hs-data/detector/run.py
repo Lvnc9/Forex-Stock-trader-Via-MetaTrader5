@@ -26,6 +26,7 @@ def run_directory(
     bars_dir: Path,
     *,
     entry_mode: str = "A",
+    trade_mode: str = "classic",
 ) -> list[dict]:
     all_dets: list[dict] = []
     for csv_path in sorted(bars_dir.glob("*.csv")):
@@ -36,7 +37,9 @@ def run_directory(
         if "_duka" in csv_path.stem.lower():
             continue
         bars = load_bars_csv(csv_path)
-        all_dets.extend(detect_on_bars(bars, symbol, tf, entry_mode=entry_mode))
+        all_dets.extend(
+            detect_on_bars(bars, symbol, tf, entry_mode=entry_mode, trade_mode=trade_mode)
+        )
     return all_dets
 
 
@@ -47,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--symbol", default="EURUSD")
     p.add_argument("--timeframe", default="H1", choices=["H1", "H4", "D1"])
     p.add_argument("--entry-mode", choices=["A", "B"], default="A")
+    p.add_argument("--trade-mode", choices=["classic", "failure"], default="classic")
     p.add_argument("--out", type=Path, required=True, help="Output detections JSON")
     return p
 
@@ -54,10 +58,18 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.bars_dir:
-        detections = run_directory(args.bars_dir, entry_mode=args.entry_mode)
+        detections = run_directory(
+            args.bars_dir, entry_mode=args.entry_mode, trade_mode=args.trade_mode
+        )
     elif args.bars:
         bars = load_bars_csv(args.bars)
-        detections = detect_on_bars(bars, args.symbol, args.timeframe, entry_mode=args.entry_mode)
+        detections = detect_on_bars(
+            bars,
+            args.symbol,
+            args.timeframe,
+            entry_mode=args.entry_mode,
+            trade_mode=args.trade_mode,
+        )
     else:
         print("Provide --bars or --bars-dir", file=sys.stderr)
         return 2

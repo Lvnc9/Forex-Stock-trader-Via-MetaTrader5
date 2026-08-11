@@ -78,6 +78,8 @@ def compute_outcomes(
         entry_price = float(entry_price)
 
     direction = label["direction"]
+    # Failure trades are opposite of classic: top failure → long; inverse failure → short.
+    long_side = (direction == "inverse") if label.get("trade_kind") != "failure" else (direction == "top")
     end = min(len(bars) - 1, entry_i + outcome_bars)
     mfe = 0.0
     mae = 0.0
@@ -85,27 +87,18 @@ def compute_outcomes(
     hit_k = False
     hit_10 = False
 
-    if direction == "top":
-        tp05 = entry_price - 0.5 * H
-        tpk = entry_price - tp2_mult_h * H
-        tp10 = entry_price - 1.0 * H
-    else:
+    if long_side:
         tp05 = entry_price + 0.5 * H
         tpk = entry_price + tp2_mult_h * H
         tp10 = entry_price + 1.0 * H
+    else:
+        tp05 = entry_price - 0.5 * H
+        tpk = entry_price - tp2_mult_h * H
+        tp10 = entry_price - 1.0 * H
 
     for i in range(entry_i + 1, end + 1):
         bar = bars[i]
-        if direction == "top":
-            fav = entry_price - bar.low
-            adv = bar.high - entry_price
-            if bar.low <= tp05:
-                hit_05 = True
-            if bar.low <= tpk:
-                hit_k = True
-            if bar.low <= tp10:
-                hit_10 = True
-        else:
+        if long_side:
             fav = bar.high - entry_price
             adv = entry_price - bar.low
             if bar.high >= tp05:
@@ -113,6 +106,15 @@ def compute_outcomes(
             if bar.high >= tpk:
                 hit_k = True
             if bar.high >= tp10:
+                hit_10 = True
+        else:
+            fav = entry_price - bar.low
+            adv = bar.high - entry_price
+            if bar.low <= tp05:
+                hit_05 = True
+            if bar.low <= tpk:
+                hit_k = True
+            if bar.low <= tp10:
                 hit_10 = True
         if fav > mfe:
             mfe = fav
@@ -124,6 +126,8 @@ def compute_outcomes(
         "entry_bar_index": entry_i,
         "entry_price": entry_price,
         "H": H,
+        "trade_kind": label.get("trade_kind") or "classic",
+        "long_side": long_side,
         "tp_0_5H": tp05,
         "tp_kH": tpk,
         "tp_1_0H": tp10,

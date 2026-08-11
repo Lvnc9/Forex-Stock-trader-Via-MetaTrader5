@@ -35,6 +35,14 @@ dist/
 # User-uploaded strategy modules (generated at runtime)
 apps/strategies/user/custom_*.py
 
+# H&S research chart images (metadata JSON is committed; bulk PNGs are not)
+hs-data/images/downloaded/
+hs-data/images/rendered/
+hs-data/images/**/*.png
+hs-data/images/**/*.jpg
+hs-data/images/**/*.jpeg
+hs-data/images/**/*.webp
+
 .DS_Store
 .idea/
 *.swp

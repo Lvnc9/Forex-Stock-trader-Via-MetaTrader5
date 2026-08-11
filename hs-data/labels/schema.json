@@ -65,7 +65,43 @@
         "no_head_prominence",
         "broken_sequence",
         "excessive_neckline_slope",
+        "deep_follow_through",
+        "classic_follow_through",
         "other"
+      ]
+    },
+    "trade_kind": {
+      "type": ["string", "null"],
+      "enum": ["classic", "failure", "none", null],
+      "description": "failure = bust trade label; classic = neckline reversal label; none = structure only"
+    },
+    "failure_level": {
+      "type": ["string", "null"],
+      "enum": ["head", "rs", "neckline", null],
+      "description": "v1 gold failures use head (Bulkowski)"
+    },
+    "failure_bar_index": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Bar whose close confirms the bust"
+    },
+    "failure_price": { "type": ["number", "null"] },
+    "failed_extreme_price": {
+      "type": ["number", "null"],
+      "description": "Min low (top) or max high (inverse) from confirm through failure entry"
+    },
+    "max_adverse_atr": {
+      "type": ["number", "null"],
+      "description": "Observed adverse excursion / ATR before failure (or until dead)"
+    },
+    "outcome_class": {
+      "type": ["string", "null"],
+      "enum": [
+        "failure_success",
+        "classic_follow_through",
+        "ambiguous",
+        "invalid_structure",
+        null
       ]
     },
     "LS_bar_index": { "type": "integer", "minimum": 0 },

@@ -415,6 +415,215 @@ def _hard_neg_no_prior_trend(closes: list[float], offset: int = 800) -> dict:
     }
 
 
+def _top_failure_bust(closes: list[float], offset: int = 1000) -> dict:
+    """
+    Confirmed H&S top that busts: close below neckline, shallow dip, then close above head.
+    """
+    while len(closes) < offset:
+        closes.append(closes[-1] if closes else 1.1000)
+    region: list[float] = []
+    # Prior uptrend
+    for i in range(45):
+        region.append(1.1000 + 0.0001 * i)
+    # Left shoulder
+    for i in range(8):
+        region.append(region[-1] + 0.0006)
+    ls_local = len(region) - 1
+    # Trough1
+    for i in range(8):
+        region.append(region[-1] - 0.0007)
+    t1_local = len(region) - 1
+    t1_p = region[-1]
+    # Head
+    for i in range(12):
+        region.append(region[-1] + 0.0011)
+    head_local = len(region) - 1
+    head_p = region[-1]
+    # Trough2 near trough1 (flat-ish neckline)
+    for i in range(10):
+        region.append(region[-1] - 0.00115)
+    t2_local = len(region) - 1
+    region[-1] = t1_p + 0.0001
+    t2_p = region[-1]
+    # Right shoulder below head
+    for i in range(9):
+        region.append(region[-1] + 0.0005)
+    rs_local = len(region) - 1
+    # _write_bars puts trough lows ~0.001 below close; detector neckline uses pivot lows.
+    # Confirm must close below those lows, then stay shallow before reclaiming the head.
+    pivot_neck = min(t1_p, t2_p) - 0.0010
+    region.append(pivot_neck - 0.00025)  # confirm close
+    confirm_local = len(region) - 1
+    region.append(pivot_neck - 0.00035)  # shallow adverse close
+    region.append(pivot_neck + 0.00010)
+    region.append((pivot_neck + head_p) / 2)
+    region.append(head_p - 0.0002)
+    region.append(head_p + 0.0008)  # failure close above head
+    fail_local = len(region) - 1
+    for i in range(25):
+        region.append(region[-1] + 0.00015)
+
+    for c in region:
+        closes.append(c)
+
+    ls_i = offset + ls_local
+    t1_i = offset + t1_local
+    head_i = offset + head_local
+    t2_i = offset + t2_local
+    rs_i = offset + rs_local
+    confirm_i = offset + confirm_local
+    fail_i = offset + fail_local
+    H = abs(closes[head_i] - ((closes[t1_i] + closes[t2_i]) / 2))
+    failed_extreme = min(closes[confirm_i : fail_i + 1])
+    return {
+        "label_id": "SYNTH_H1_top_failure_bust_001",
+        "symbol": "EURUSD",
+        "timeframe": "H1",
+        "direction": "top",
+        "hard_negative": False,
+        "hard_negative_reason": None,
+        "trade_kind": "failure",
+        "failure_level": "head",
+        "failure_bar_index": fail_i,
+        "failure_price": closes[fail_i],
+        "failed_extreme_price": failed_extreme,
+        "outcome_class": "failure_success",
+        "LS_bar_index": ls_i,
+        "LS_price": closes[ls_i],
+        "LS_time": None,
+        "trough1_bar_index": t1_i,
+        "trough1_price": closes[t1_i],
+        "trough1_time": None,
+        "head_bar_index": head_i,
+        "head_price": closes[head_i],
+        "head_time": None,
+        "trough2_bar_index": t2_i,
+        "trough2_price": closes[t2_i],
+        "trough2_time": None,
+        "RS_bar_index": rs_i,
+        "RS_price": closes[rs_i],
+        "RS_time": None,
+        "neckline_left_bar_index": t1_i,
+        "neckline_left_price": closes[t1_i],
+        "neckline_right_bar_index": t2_i,
+        "neckline_right_price": closes[t2_i],
+        "confirmation_bar_index": confirm_i,
+        "confirmation_price": closes[confirm_i],
+        "confirm_rule": "close_beyond_neckline",
+        "retest_bar_index": None,
+        "H": H,
+        "label_quality": "gold",
+        "entry_mode": None,
+        "entry_bar_index": fail_i,
+        "entry_price": closes[fail_i],
+        "sl_price": None,
+        "tp1_price": None,
+        "tp2_price": None,
+        "outcomes": {
+            "outcome_bars": 50,
+            "hit_0_5H": None,
+            "hit_1_0H": None,
+            "mfe": None,
+            "mae": None,
+        },
+        "false_positive": False,
+        "notes": "SYNTHETIC failure bust — confirm then close above head",
+        "bars_file": "EURUSD_H1.csv",
+    }
+
+
+def _top_deep_follow_through(closes: list[float], offset: int = 1200) -> dict:
+    """Classic follow-through after confirm — must NOT produce a failure entry."""
+    while len(closes) < offset:
+        closes.append(closes[-1] if closes else 1.1000)
+    region: list[float] = []
+    for i in range(40):
+        region.append(1.0950 + 0.00008 * i)
+    for i in range(10):
+        region.append(region[-1] + 0.0005)
+    ls_local = len(region) - 1
+    for i in range(8):
+        region.append(region[-1] - 0.00055)
+    t1_local = len(region) - 1
+    for i in range(12):
+        region.append(region[-1] + 0.0010)
+    head_local = len(region) - 1
+    for i in range(10):
+        region.append(region[-1] - 0.00105)
+    t2_local = len(region) - 1
+    for i in range(10):
+        region.append(region[-1] + 0.00045)
+    rs_local = len(region) - 1
+    for i in range(30):
+        region.append(region[-1] - 0.0008)  # deep follow-through
+    confirm_local = rs_local + 5
+    for c in region:
+        closes.append(c)
+
+    ls_i = offset + ls_local
+    t1_i = offset + t1_local
+    head_i = offset + head_local
+    t2_i = offset + t2_local
+    rs_i = offset + rs_local
+    confirm_i = offset + confirm_local
+    H = abs(closes[head_i] - ((closes[t1_i] + closes[t2_i]) / 2))
+    return {
+        "label_id": "SYNTH_H1_neg_deep_follow_001",
+        "symbol": "EURUSD",
+        "timeframe": "H1",
+        "direction": "top",
+        "hard_negative": True,
+        "hard_negative_reason": "deep_follow_through",
+        "trade_kind": "none",
+        "failure_level": None,
+        "failure_bar_index": None,
+        "failure_price": None,
+        "failed_extreme_price": None,
+        "outcome_class": "classic_follow_through",
+        "LS_bar_index": ls_i,
+        "LS_price": closes[ls_i],
+        "LS_time": None,
+        "trough1_bar_index": t1_i,
+        "trough1_price": closes[t1_i],
+        "trough1_time": None,
+        "head_bar_index": head_i,
+        "head_price": closes[head_i],
+        "head_time": None,
+        "trough2_bar_index": t2_i,
+        "trough2_price": closes[t2_i],
+        "trough2_time": None,
+        "RS_bar_index": rs_i,
+        "RS_price": closes[rs_i],
+        "RS_time": None,
+        "neckline_left_bar_index": t1_i,
+        "neckline_left_price": closes[t1_i],
+        "neckline_right_bar_index": t2_i,
+        "neckline_right_price": closes[t2_i],
+        "confirmation_bar_index": confirm_i,
+        "confirmation_price": closes[confirm_i],
+        "confirm_rule": "close_beyond_neckline",
+        "retest_bar_index": None,
+        "H": H,
+        "label_quality": "reject",
+        "entry_mode": None,
+        "entry_bar_index": None,
+        "entry_price": None,
+        "sl_price": None,
+        "tp1_price": None,
+        "tp2_price": None,
+        "outcomes": {
+            "outcome_bars": 50,
+            "hit_0_5H": None,
+            "hit_1_0H": None,
+            "mfe": None,
+            "mae": None,
+        },
+        "false_positive": True,
+        "notes": "SYNTHETIC deep classic follow-through — failure detector must stay flat",
+        "bars_file": "EURUSD_H1.csv",
+    }
+
+
 def _detection_from_label(label: dict, det_id: str) -> dict:
     return {
         "detection_id": det_id,
@@ -458,22 +667,35 @@ def main(argv: list[str] | None = None) -> int:
     neg = _hard_neg_double_top(closes, offset=400)
     top_down = _top_down_neckline(closes, offset=600)
     neg_prior = _hard_neg_no_prior_trend(closes, offset=800)
+    fail_bust = _top_failure_bust(closes, offset=1000)
+    deep_ft = _top_deep_follow_through(closes, offset=1200)
 
     bars_path = args.out / "bars" / "EURUSD_H1.csv"
     _write_bars(bars_path, closes)
 
     labels_dir = args.out / "labels"
     labels_dir.mkdir(parents=True, exist_ok=True)
-    all_labels = (top, inv, neg, top_down, neg_prior)
+    all_labels = (top, inv, neg, top_down, neg_prior, fail_bust, deep_ft)
     for lab in all_labels:
         (labels_dir / f"{lab['label_id']}.json").write_text(json.dumps(lab, indent=2) + "\n")
 
     true_labels = [top, inv, top_down]
     perfect = [_detection_from_label(lab, f"det_{lab['label_id']}") for lab in true_labels]
     miss = [_detection_from_label(inv, "det_inv_only")]
+    fail_det = _detection_from_label(fail_bust, f"det_{fail_bust['label_id']}")
+    fail_det["trade_kind"] = "failure"
+    fail_det["failure_level"] = "head"
+    fail_det["failure_bar_index"] = fail_bust["failure_bar_index"]
+    fail_det["failure_price"] = fail_bust["failure_price"]
+    fail_det["failed_extreme_price"] = fail_bust["failed_extreme_price"]
+    fail_det["entry_bar_index"] = fail_bust["entry_bar_index"]
+    fail_det["entry_price"] = fail_bust["entry_price"]
+    fail_det["entry_mode"] = "failure"
+    fail_det["detection_id"] = fail_det["detection_id"] + "_fail"
 
     (args.out / "detections_perfect.json").write_text(json.dumps(perfect, indent=2) + "\n")
     (args.out / "detections_miss_one.json").write_text(json.dumps(miss, indent=2) + "\n")
+    (args.out / "detections_failure.json").write_text(json.dumps([fail_det], indent=2) + "\n")
 
     meta = {
         "synthetic": True,
@@ -486,6 +708,8 @@ def main(argv: list[str] | None = None) -> int:
             "true_top_down_neck": top_down["label_id"],
             "hard_neg_double_top": neg["label_id"],
             "hard_neg_no_prior": neg_prior["label_id"],
+            "true_top_failure_bust": fail_bust["label_id"],
+            "hard_neg_deep_follow": deep_ft["label_id"],
         },
     }
     (args.out / "META.json").write_text(json.dumps(meta, indent=2) + "\n")

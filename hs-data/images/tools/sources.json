@@ -1,0 +1,23 @@
+[
+  {
+    "id": "stockgro_failed_hs_page",
+    "url": "https://www.stockgro.club/blogs/trading/failed-head-and-shoulder-pattern/",
+    "kind": "article_page",
+    "note": "Educational article with example chart of failed H&S. Download only if license/robots allow; prefer self-rendered bars.",
+    "license_note": "Third-party educational content — do not use for model training; metadata/reference only."
+  },
+  {
+    "id": "daily_price_action_hs",
+    "url": "https://dailypriceaction.com/blog/head-and-shoulders-pattern/",
+    "kind": "article_page",
+    "note": "FX practitioner article covering failed breaks. Prefer screenshots of our own charts for gold labels.",
+    "license_note": "Third-party educational content — reference only."
+  },
+  {
+    "id": "whaleempire_hs_fail",
+    "url": "https://whaleempire.com/2025/06/14/why-head-and-shoulders-pattern-fails/",
+    "kind": "article_page",
+    "note": "Failure checklist and volume notes.",
+    "license_note": "Third-party educational content — reference only."
+  }
+]

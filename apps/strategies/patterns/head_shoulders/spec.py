@@ -56,6 +56,10 @@ class HSSpec:
     score_weight_neckline_quality: float
     score_weight_volume: float
     score_weight_dual_scale: float
+    max_bust_atr: float = 1.5
+    failure_entry_level: str = "head"
+    failure_max_watch_bars: int = 80
+    failure_enter_next_open: bool = False
     atr_period: int = 14
 
     def score_weights(self) -> dict[str, float]:
@@ -77,8 +81,12 @@ class HSSpec:
         geo = raw["geometry"]
         neck = raw["neckline"]
         entry = raw["entry"]
+        failure = raw.get("failure") or {}
         stops = raw["stops_targets"]
         score = raw["score"]
+        entry_level = failure.get("entry_level", "head")
+        if isinstance(entry_level, dict):
+            entry_level = entry_level.get("value", "head")
         return cls(
             swing_l_short=int(_val(piv, "swing_L_short", 3)),
             swing_l_medium=int(_val(piv, "swing_L_medium", 8)),
@@ -108,6 +116,10 @@ class HSSpec:
             score_weight_neckline_quality=float(_val(score["weights"], "neckline_quality", 15)),
             score_weight_volume=float(_val(score["weights"], "volume", 10)),
             score_weight_dual_scale=float(_val(score["weights"], "dual_scale_agreement", 5)),
+            max_bust_atr=float(_val(failure, "max_bust_atr", 1.5)),
+            failure_entry_level=str(entry_level),
+            failure_max_watch_bars=int(_val(failure, "max_watch_bars", 80)),
+            failure_enter_next_open=bool(_val(failure, "enter_next_open", False)),
         )
 
 
@@ -118,6 +130,7 @@ def get_spec() -> HSSpec:
 
 def spec_from_parameters(parameters: dict[str, Any]) -> HSSpec:
     base = get_spec()
+    failure_level = str(parameters.get("failure_level", base.failure_entry_level))
     return replace(
         base,
         swing_l_short=int(parameters.get("swing_L_short", base.swing_l_short)),
@@ -125,4 +138,9 @@ def spec_from_parameters(parameters: dict[str, Any]) -> HSSpec:
         min_score_threshold=float(parameters.get("min_score", base.min_score_threshold)),
         prior_trend_bars=int(parameters.get("prior_trend_bars", base.prior_trend_bars)),
         tp2_mult_h=float(parameters.get("tp2_k", base.tp2_mult_h)),
+        max_bust_atr=float(parameters.get("max_bust_atr", base.max_bust_atr)),
+        failure_entry_level=failure_level,
+        failure_max_watch_bars=int(
+            parameters.get("failure_max_watch_bars", base.failure_max_watch_bars)
+        ),
     )

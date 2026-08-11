@@ -9,6 +9,7 @@ from apps.strategies.patterns.head_shoulders.assembler import assemble_inverse, 
 from apps.strategies.patterns.head_shoulders.atr import atr_at, compute_atr
 from apps.strategies.patterns.head_shoulders.confirm import find_confirmation
 from apps.strategies.patterns.head_shoulders.entry import resolve_entry
+from apps.strategies.patterns.head_shoulders.failure import find_failure
 from apps.strategies.patterns.head_shoulders.geometry import evaluate_geometry
 from apps.strategies.patterns.head_shoulders.pivots import find_all_pivots
 from apps.strategies.patterns.head_shoulders.spec import HSSpec, get_spec
@@ -31,8 +32,17 @@ def detect_on_bars(
     spec: HSSpec | None = None,
     *,
     entry_mode: str = "A",
+    trade_mode: str = "classic",
 ) -> list[dict[str, Any]]:
+    """
+    Detect H&S patterns.
+
+    trade_mode:
+      - classic: enter on neckline confirmation (legacy)
+      - failure: confirm structure, then enter only on Bulkowski-style bust
+    """
     spec = spec or get_spec()
+    mode = (trade_mode or "classic").lower()
     short, medium = find_all_pivots(bars, spec)
     short_heads = {p.index for p in short if p.kind == "high"} | {p.index for p in short if p.kind == "low"}
     medium_heads = {p.index for p in medium if p.kind == "high"} | {p.index for p in medium if p.kind == "low"}
@@ -55,11 +65,49 @@ def detect_on_bars(
         if confirm is None:
             continue
 
-        entry = resolve_entry(cand, bars, confirm, spec, entry_mode=entry_mode)
-        if entry is None:
-            continue
+        if mode == "failure":
+            failure = find_failure(
+                cand,
+                bars,
+                confirm,
+                spec,
+                a,
+                failure_level=spec.failure_entry_level,
+            )
+            if failure is None:
+                continue
+            entry_bar_index = failure.bar_index
+            entry_price = failure.price
+            entry_mode_out = "failure"
+            retest_bar_index = None
+            failure_fields = {
+                "trade_kind": "failure",
+                "failure_level": failure.failure_level,
+                "failure_bar_index": failure.bar_index,
+                "failure_price": failure.price,
+                "failed_extreme_price": failure.failed_extreme,
+                "max_adverse": failure.max_adverse,
+            }
+        else:
+            entry = resolve_entry(cand, bars, confirm, spec, entry_mode=entry_mode)
+            if entry is None:
+                continue
+            entry_bar_index = entry.bar_index
+            entry_price = entry.price
+            entry_mode_out = entry.mode
+            retest_bar_index = entry.retest_bar_index
+            failure_fields = {
+                "trade_kind": "classic",
+                "failure_level": None,
+                "failure_bar_index": None,
+                "failure_price": None,
+                "failed_extreme_price": None,
+                "max_adverse": None,
+            }
 
         det_id = f"{symbol}_{timeframe}_{cand.direction}_h{cand.head.index}_{cand.scale}"
+        if mode == "failure":
+            det_id = f"{det_id}_fail"
         detections.append(
             {
                 "detection_id": det_id,
@@ -83,13 +131,14 @@ def detect_on_bars(
                 "confirmation_bar_index": confirm.bar_index,
                 "confirmation_price": confirm.price,
                 "confirm_rule": confirm.confirm_rule,
-                "entry_mode": entry.mode,
-                "entry_bar_index": entry.bar_index,
-                "entry_price": entry.price,
-                "retest_bar_index": entry.retest_bar_index,
+                "entry_mode": entry_mode_out,
+                "entry_bar_index": entry_bar_index,
+                "entry_price": entry_price,
+                "retest_bar_index": retest_bar_index,
                 "H": geo.H,
                 "score": round(geo.score, 2),
                 "scale": cand.scale,
+                **failure_fields,
             }
         )
 

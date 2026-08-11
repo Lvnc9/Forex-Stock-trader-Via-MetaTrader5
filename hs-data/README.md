@@ -28,9 +28,10 @@ hs-data/
 | `raw/` | Untouched downloads; keep for audit |
 | `bars/` | One CSV per `SYMBOL_TF.csv` (e.g. `EURUSD_H1.csv`) |
 | `labels/` | `schema.json`, filled labels, seed examples |
-| `reports/` | Precision/recall/F1, missed IDs, entry match, TP rates |
+| `images/` | Research chart corpus (rendered/downloaded) + labeling checklist for **failures** |
+| `reports/` | Precision/recall/F1, missed IDs, entry match, TP rates, failure gates |
 | `harness/` | Drop-in evaluator — no EA source required |
-| `synthetic/` | Geometric fake patterns for unit tests |
+| `synthetic/` | Geometric fake patterns for unit tests (includes failure bust) |
 
 ---
 
