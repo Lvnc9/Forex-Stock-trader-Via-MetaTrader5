@@ -47,20 +47,25 @@ If the detail page stays on **Queued**, Redis or the worker is not running.
 
 ### Safety rails
 
-| Guard | Value | Behavior |
-|-------|-------|----------|
-| `MAX_BACKTEST_BARS` | 150_000 | Fail fast after load if primary bars exceed this (suggest H1/H4 or shorter range) |
-| `BACKTEST_TIMEOUT_SECONDS` | 900 | Wall-clock timeout via SIGALRM **main thread only**; workers rely on orphan cleanup |
-| Orphan cleanup | 30 min | Pending/running runs older than this → `failed` (list/create/execute) |
+| Guard | Default | Behavior |
+|-------|---------|----------|
+| `TRADEBOT_MAX_BACKTEST_BARS` | **2_000_000** | Fail if primary bars exceed (covers ~1.4M M1). Set `0` to disable. |
+| `TRADEBOT_BACKTEST_TIMEOUT_SECONDS` | **0** (off) | SIGALRM on main thread only; workers ignore |
+| `TRADEBOT_ORPHAN_RUNNING_MINUTES` | **120** | Pending/running older than this → `failed` |
 
-Clear stuck runs manually:
+```bash
+# Example: hard-cap still allows full multi-year M1
+export TRADEBOT_MAX_BACKTEST_BARS=2000000
+export TRADEBOT_ORPHAN_RUNNING_MINUTES=240
+```
+
+Clear stuck runs:
 
 ```bash
 python manage.py fail_orphaned_backtests --all-stuck
 ```
 
-**Head & shoulders:** prefer **H1/H4**. Multi-year M1 will hit the bar cap (or hang on older builds that re-detected every bar).
-
+Multi-year M1/M5 is supported after H&S `prepare()` (one-shot detect). Prefer Celery async so the UI stays responsive during long runs.
 ---
 
 ## BacktestRun inputs (form fields)

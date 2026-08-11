@@ -16,14 +16,14 @@ from apps.backtest.models import BacktestRun
 from apps.backtest.services import execute_backtest
 
 
-@shared_task(name="backtest.run", bind=True, soft_time_limit=3600, time_limit=3900)
+@shared_task(name="backtest.run", bind=True, soft_time_limit=14_400, time_limit=14_700)
 def run_backtest_task(self, run_id: int) -> int:
     run = BacktestRun.objects.get(pk=run_id)
     execute_backtest(run)
     return run_id
 
 
-@shared_task(name="backtest.sweep", bind=True, soft_time_limit=7200, time_limit=7500)
+@shared_task(name="backtest.sweep", bind=True, soft_time_limit=28_800, time_limit=29_100)
 def run_sweep_task(self, run_ids: list[int]) -> list[int]:
     """Execute independent backtest runs via multiprocess pool (not the bar loop)."""
     from apps.backtest.sweep import execute_sweep_run_ids

@@ -32,9 +32,16 @@ def mark_running(run) -> None:
 
 def fail_orphaned_runs(*, older_than_minutes: int | None = None) -> int:
     """Mark stuck pending/running runs as failed. Returns count updated."""
+    from django.conf import settings
+
     from apps.backtest.models import BacktestRun
 
-    minutes = older_than_minutes if older_than_minutes is not None else ORPHAN_RUNNING_MINUTES
+    if older_than_minutes is None:
+        minutes = int(
+            getattr(settings, "TRADEBOT_ORPHAN_RUNNING_MINUTES", ORPHAN_RUNNING_MINUTES)
+        )
+    else:
+        minutes = older_than_minutes
     qs = BacktestRun.objects.filter(
         status__in=(BacktestRun.Status.PENDING, BacktestRun.Status.RUNNING),
     )
@@ -43,8 +50,8 @@ def fail_orphaned_runs(*, older_than_minutes: int | None = None) -> int:
         qs = qs.filter(created_at__lt=cutoff)
     msg = (
         f"Interrupted or stuck (no completion within {max(minutes, 1)} minutes). "
-        "Re-run with a higher timeframe (H1/H4) or a shorter date range. "
-        "Head & shoulders must not use multi-year M1."
+        "Re-run; for multi-year M1 use Celery async and expect a long wait. "
+        "Raise TRADEBOT_ORPHAN_RUNNING_MINUTES if the job is still legitimately running."
     )
     return qs.update(
         status=BacktestRun.Status.FAILED,

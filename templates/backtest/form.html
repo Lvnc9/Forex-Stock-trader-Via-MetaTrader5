@@ -38,9 +38,10 @@
   </p>
   <p class="text-xs text-zinc-600">
     After submit you land on the run page (<code class="text-zinc-500">/backtest/&lt;pk&gt;/</code>) with
-    balances, KPIs, account-balance chart, and trades. Prefer <strong class="font-medium text-zinc-400">H1/H4</strong>
-    for pattern strategies (Head &amp; shoulders). Multi-year M1 is rejected above
-    <code class="text-zinc-500">150k</code> bars. Live progress needs Redis + Celery
+    balances, KPIs, account-balance chart, and trades.     Prefer <strong class="font-medium text-zinc-400">H1/H4</strong>
+    for faster pattern runs; multi-year M1 (~1M+ bars) is allowed
+    (cap <code class="text-zinc-500">TRADEBOT_MAX_BACKTEST_BARS</code>, default 2M).
+    Live progress needs Redis + Celery
     (<code class="text-zinc-500">CELERY_TASK_ALWAYS_EAGER=False</code>) — see docs/backtestVars.md.
   </p>
 

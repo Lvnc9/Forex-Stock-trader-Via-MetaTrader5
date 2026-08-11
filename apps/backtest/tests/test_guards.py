@@ -6,10 +6,9 @@ from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
-from apps.backtest.constants import MAX_BACKTEST_BARS
 from apps.backtest.models import BacktestRun
 from apps.backtest.progress import fail_orphaned_runs
 from apps.backtest.services import _can_use_sigalrm, execute_backtest
@@ -17,10 +16,9 @@ from apps.strategies.models import Strategy
 
 
 class SigalrmGuardTests(SimpleTestCase):
-    def test_can_use_sigalrm_on_main_thread(self) -> None:
-        import threading
-
-        self.assertTrue(_can_use_sigalrm() is (threading.current_thread() is threading.main_thread()))
+    def test_sigalrm_skipped_when_timeout_disabled(self) -> None:
+        with override_settings(TRADEBOT_BACKTEST_TIMEOUT_SECONDS=0):
+            self.assertFalse(_can_use_sigalrm())
 
     def test_sigalrm_skipped_on_worker_thread(self) -> None:
         import threading
@@ -28,7 +26,8 @@ class SigalrmGuardTests(SimpleTestCase):
         results: list[bool] = []
 
         def worker() -> None:
-            results.append(_can_use_sigalrm())
+            with override_settings(TRADEBOT_BACKTEST_TIMEOUT_SECONDS=60):
+                results.append(_can_use_sigalrm())
 
         t = threading.Thread(target=worker)
         t.start()
@@ -81,10 +80,11 @@ class OrphanCleanupTests(TestCase):
 
 
 class MaxBarsGuardTests(SimpleTestCase):
+    @override_settings(TRADEBOT_MAX_BACKTEST_BARS=1_000)
     @patch("apps.backtest.services.BacktestDataHandler")
     @patch("apps.backtest.services.instantiate_strategy")
     def test_execute_rejects_too_many_bars(self, _inst, handler_cls) -> None:
-        n = MAX_BACKTEST_BARS + 10
+        n = 1_010
         idx = pd.date_range("2024-01-01", periods=n, freq="min", tz="UTC")
         bars = pd.DataFrame(
             {
@@ -115,7 +115,6 @@ class MaxBarsGuardTests(SimpleTestCase):
         run.contract_size = 100_000
         run.status = BacktestRun.Status.PENDING
 
-        # Use real model fields via a thin wrapper: patch mark_running / save path
         with patch("apps.backtest.services.fail_orphaned_runs"), patch(
             "apps.backtest.services.mark_running"
         ), patch("apps.backtest.services.update_run_progress"), patch(

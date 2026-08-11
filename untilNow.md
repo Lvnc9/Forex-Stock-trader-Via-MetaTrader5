@@ -105,7 +105,7 @@ Root cause: Head & shoulders called `detect_on_bars` on **every** bar over ~1.4M
 Fixes:
 - `BaseStrategy.prepare()` + `SignalEngine` calls it once
 - H&S detects once in `prepare`, O(1) lookup in `on_bar`
-- `MAX_BACKTEST_BARS=150_000` fail-fast; 15m timeout; orphan cleanup
+- `TRADEBOT_MAX_BACKTEST_BARS=2_000_000` (allows ~1.4M M1); timeout off by default; orphan 120m
 - `python manage.py fail_orphaned_backtests --all-stuck`
 
 **Use H1/H4 for H&S**, not multi-year M1.

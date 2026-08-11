@@ -16,13 +16,22 @@ from apps.strategies.loader import instantiate_strategy
 
 
 class BacktestTimeoutError(TimeoutError):
-    """Raised when a single backtest exceeds BACKTEST_TIMEOUT_SECONDS."""
+    """Raised when a single backtest exceeds the configured wall-clock limit."""
+
+
+def _max_bars() -> int:
+    return int(getattr(settings, "TRADEBOT_MAX_BACKTEST_BARS", MAX_BACKTEST_BARS))
+
+
+def _timeout_seconds() -> int:
+    return int(getattr(settings, "TRADEBOT_BACKTEST_TIMEOUT_SECONDS", BACKTEST_TIMEOUT_SECONDS))
 
 
 def _timeout_handler(signum, frame) -> None:  # noqa: ARG001
+    secs = _timeout_seconds()
     raise BacktestTimeoutError(
-        f"Backtest exceeded {BACKTEST_TIMEOUT_SECONDS}s wall-clock limit. "
-        "Use a higher timeframe (H1/H4) or a shorter date range."
+        f"Backtest exceeded {secs}s wall-clock limit. "
+        "Raise TRADEBOT_BACKTEST_TIMEOUT_SECONDS or use a higher timeframe."
     )
 
 
@@ -30,7 +39,7 @@ def _can_use_sigalrm() -> bool:
     """SIGALRM is main-thread only; Celery / runserver worker threads must skip it."""
     if not hasattr(signal, "SIGALRM"):
         return False
-    if BACKTEST_TIMEOUT_SECONDS <= 0:
+    if _timeout_seconds() <= 0:
         return False
     return threading.current_thread() is threading.main_thread()
 
@@ -42,9 +51,10 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
 
     alarm_set = False
     try:
+        timeout_secs = _timeout_seconds()
         if _can_use_sigalrm():
             signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(int(BACKTEST_TIMEOUT_SECONDS))
+            signal.alarm(int(timeout_secs))
             alarm_set = True
 
         params = run.strategy.runtime_parameters()
@@ -72,11 +82,12 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
             raise ValueError("No bars in selected date range / timeframe.")
 
         n_bars = len(bars)
-        if n_bars > MAX_BACKTEST_BARS:
+        max_bars = _max_bars()
+        if max_bars > 0 and n_bars > max_bars:
             raise ValueError(
-                f"Too many bars ({n_bars:,} > {MAX_BACKTEST_BARS:,}). "
-                "Shorten the date range or use a higher timeframe (H1/H4). "
-                "Multi-year M1 will hang pattern strategies like Head & shoulders."
+                f"Too many bars ({n_bars:,} > {max_bars:,}). "
+                "Raise TRADEBOT_MAX_BACKTEST_BARS, shorten the date range, "
+                "or use a higher timeframe (H1/H4)."
             )
 
         update_run_progress(run, 8.0, f"Loaded {n_bars} {run.timeframe} bars")
