@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "spec_id": "hs-spec.v1",
+  "version": "1.0.0",
+  "pattern": "head_and_shoulders",
+  "notes": {
+    "authority": "EdwardsMagee_definition; Bulkowski_empirics_stock; StockCharts_secondary",
+    "fx_calibration": "All fields marked tunable=true MUST be re-estimated on FX labels. Bulkowski ~51% full-target hit is stock/bull sample only.",
+    "agent_rule": "Prefer machine checks against this file over prose in L1."
+  },
+  "pivots": {
+    "swing_L_short": { "value": 3, "tunable": true },
+    "swing_L_medium": { "value": 8, "tunable": true },
+    "min_pivot_atr": { "value": 0.5, "tunable": true },
+    "merge_head_bars": { "value": 3, "tunable": true },
+    "dual_scale_required": true
+  },
+  "prior_trend": {
+    "prior_trend_bars": { "value": 50, "tunable": true },
+    "min_prior_move_atr": { "value": 2.0, "tunable": true },
+    "top_requires": "uptrend",
+    "inverse_requires": "downtrend"
+  },
+  "geometry": {
+    "head_prominence_atr": { "value": 0.5, "tunable": true },
+    "shoulder_tol": { "value": 1.0, "unit": "ATR", "tunable": true },
+    "time_tol": { "value": 0.35, "unit": "relative_bar_diff", "tunable": true },
+    "width_tol": { "value": 0.40, "unit": "relative", "tunable": true },
+    "soft_tol_mult": { "value": 1.25, "tunable": true },
+    "min_atr_mult": { "value": 1.0, "tunable": true },
+    "max_neckline_slope": {
+      "value": 0.15,
+      "unit": "abs_delta_price_per_bar_over_ATR",
+      "tunable": true
+    }
+  },
+  "required_pivot_sequence": {
+    "top": ["LS_high", "left_armpit_low", "head_high", "right_armpit_low", "RS_high"],
+    "inverse": ["LS_low", "left_armpit_high", "head_low", "right_armpit_high", "RS_low"],
+    "constraints": {
+      "top": {
+        "head_high_gt_LS_high": true,
+        "head_high_gt_RS_high": true,
+        "left_armpit_before_head": true,
+        "right_armpit_before_RS": true
+      },
+      "inverse": {
+        "head_low_lt_LS_low": true,
+        "head_low_lt_RS_low": true,
+        "left_armpit_before_head": true,
+        "right_armpit_before_RS": true
+      }
+    }
+  },
+  "neckline": {
+    "construct_from": ["left_armpit", "right_armpit"],
+    "slope_sign": {
+      "up": "right_armpit_price > left_armpit_price",
+      "down": "right_armpit_price < left_armpit_price",
+      "flat": "abs_diff <= flat_eps_atr * ATR"
+    },
+    "flat_eps_atr": { "value": 0.1, "tunable": true }
+  },
+  "confirmation": {
+    "require_bar_close": true,
+    "top": {
+      "neckline_up_or_flat": "close_below_neckline",
+      "neckline_down": "close_below_right_armpit"
+    },
+    "inverse": {
+      "neckline_down_or_flat": "close_above_neckline",
+      "neckline_up": "close_above_right_armpit"
+    }
+  },
+  "entry": {
+    "modes": {
+      "A": {
+        "id": "confirmation_close",
+        "trigger": "confirmation_event",
+        "enter_next_open": { "value": false, "tunable": true }
+      },
+      "B": {
+        "id": "retest_rejection",
+        "trigger": "retest_then_reject_close",
+        "retest_max_bars": { "value": 15, "tunable": true },
+        "retest_level": "confirmation_level"
+      }
+    },
+    "forbidden": ["enter_on_RS_pivot_alone", "enter_on_intrabar_pierce_without_close"]
+  },
+  "stops_targets": {
+    "measure_H": "abs(head_extreme - neckline_price_at_head_time)",
+    "SL": {
+      "top": "above_RS_high + sl_atr_buffer * ATR",
+      "inverse": "below_RS_low - sl_atr_buffer * ATR",
+      "sl_atr_buffer": { "value": 0.25, "tunable": true }
+    },
+    "TP": {
+      "staging_required": true,
+      "TP1": { "mult_H": 0.5, "tunable": true },
+      "TP2": {
+        "mult_H": 0.51,
+        "tunable": true,
+        "default_k_source": "bulkowski_stock_proxy_pending_FX_calibration"
+      },
+      "full_1H_as_sole_default": false,
+      "optional_trail_after_TP1": {
+        "enabled_default": false,
+        "trail_atr": { "value": 1.0, "tunable": true }
+      }
+    }
+  },
+  "volume": {
+    "required": false,
+    "fx_note": "FX tick volume is not exchange volume; soft score only",
+    "vol_breakout_mult": { "value": 1.2, "tunable": true },
+    "vol_sma_n": { "value": 20, "tunable": true },
+    "volume_weight_when_missing": 0
+  },
+  "score": {
+    "range": [0, 100],
+    "MinScoreThreshold": { "value": 60, "tunable": true },
+    "weights": {
+      "prior_trend": { "value": 15, "tunable": true },
+      "head_prominence": { "value": 20, "tunable": true },
+      "shoulder_symmetry": { "value": 20, "tunable": true },
+      "time_symmetry": { "value": 15, "tunable": true },
+      "neckline_quality": { "value": 15, "tunable": true },
+      "volume": { "value": 10, "tunable": true },
+      "dual_scale_agreement": { "value": 5, "tunable": true }
+    },
+    "reject_if_hard_fail": [
+      "missing_required_pivot_sequence",
+      "head_prominence_hard_fail",
+      "prior_trend_hard_fail",
+      "neckline_slope_exceeds_max"
+    ]
+  },
+  "label_schema_expected": {
+    "required_fields": [
+      "symbol",
+      "timeframe",
+      "direction",
+      "LS_time",
+      "LS_price",
+      "left_armpit_time",
+      "left_armpit_price",
+      "head_time",
+      "head_price",
+      "right_armpit_time",
+      "right_armpit_price",
+      "RS_time",
+      "RS_price",
+      "confirm_time",
+      "confirm_price",
+      "confirm_rule",
+      "H",
+      "label_quality"
+    ],
+    "optional_fields": [
+      "entry_mode",
+      "entry_time",
+      "entry_price",
+      "sl_price",
+      "tp1_price",
+      "tp2_price",
+      "tp1_hit",
+      "tp2_hit",
+      "false_positive",
+      "notes"
+    ],
+    "enums": {
+      "direction": ["top", "inverse"],
+      "confirm_rule": [
+        "close_beyond_neckline",
+        "close_beyond_right_armpit"
+      ],
+      "entry_mode": ["A", "B"],
+      "label_quality": ["gold", "silver", "reject"]
+    }
+  }
+}

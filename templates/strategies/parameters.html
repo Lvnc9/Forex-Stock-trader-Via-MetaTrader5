@@ -1,0 +1,27 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Parameters · {{ strategy.name }}{% endblock %}
+
+{% block content %}
+<p class="mb-6 text-sm text-zinc-400">{{ strategy.module_path }}</p>
+
+<form method="post" class="mx-auto max-w-md space-y-5">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label class="tb-label" for="{{ field.id_for_label }}">{{ field.label|default:field.name }}</label>
+      {{ field }}
+      {% for error in field.errors %}
+        <p class="mt-1 text-xs text-rose-400">{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endfor %}
+  <div class="flex flex-wrap gap-3">
+    <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
+      Save parameters
+    </button>
+    <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800">Back</a>
+    <a href="{% url 'backtest:create' %}" class="text-sm text-sky-400 hover:text-sky-300">Run backtest →</a>
+  </div>
+</form>
+{% endblock %}

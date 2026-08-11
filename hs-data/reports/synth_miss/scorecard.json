@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-08-10T14:22:27.988715+00:00",
+  "entry_mode": "A",
+  "match_tol_bars": 5,
+  "outcome_bars": 50,
+  "outcomes_on": "true_all",
+  "n_labels": 3,
+  "n_detections": 1,
+  "detection_metrics": {
+    "n_true_labels": 2,
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.6666666666666666,
+    "missed_label_ids": [
+      "SYNTH_H1_top_geom_001"
+    ],
+    "false_accept_label_ids": [],
+    "unmatched_detection_ids": [],
+    "entry_bar_match_rate": 1.0,
+    "entry_bar_match_n": 1,
+    "entry_bar_match_hits": 1
+  },
+  "tp_metrics": {
+    "n_labels_with_outcomes": 2,
+    "hit_0_5H_rate": 1.0,
+    "hit_1_0H_rate": 0.0,
+    "hit_0_5H_count": 2,
+    "hit_1_0H_count": 0,
+    "note": "Rates computed on OUR bars from label entry; not Bulkowski equity figures."
+  },
+  "spec_ref": "hs-curriculum/hs-spec.v1.json",
+  "l0_ref": "hs-curriculum/L0-diagnosis.md"
+}

@@ -1,0 +1,17 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}Delete strategy{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-lg space-y-6">
+  {% csrf_token %}
+  <p class="text-sm text-zinc-300">
+    Delete <span class="font-semibold text-white">{{ strategy.name }}</span>?
+    This is blocked if backtest runs or deployments still reference it.
+  </p>
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-rose-400">Delete</button>
+    <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300">Cancel</a>
+  </div>
+</form>
+{% endblock %}

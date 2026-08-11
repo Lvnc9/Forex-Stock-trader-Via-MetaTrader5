@@ -1,0 +1,13 @@
+<div class="builder-row rule-row rounded-lg border border-zinc-800 bg-zinc-900/40 p-4" data-index="{{ row.index }}" data-group="{{ row.group }}">
+  <div class="mb-3 flex items-end justify-between gap-3">
+    <div class="w-40"><label class="tb-label">Op</label>{{ row.op }}</div>
+    <button type="button"
+            class="rounded border border-zinc-700 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            title="Remove rule"
+            onclick="this.closest('.builder-row').remove()">−</button>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    {% include "strategies/_expr_side.html" with title="Left" side=row.left %}
+    {% include "strategies/_expr_side.html" with title="Right" side=row.right %}
+  </div>
+</div>

@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hs-data/labels/schema.json",
+  "title": "H&S label record",
+  "description": "Bar-index label schema for FX H&S evaluation. Compatible with hs-curriculum/hs-spec.v1.json label_schema_expected. trough1=left_armpit, trough2=right_armpit (tops); for inverse, armpits are intervening highs.",
+  "type": "object",
+  "required": [
+    "label_id",
+    "symbol",
+    "timeframe",
+    "direction",
+    "hard_negative",
+    "LS_bar_index",
+    "LS_price",
+    "trough1_bar_index",
+    "trough1_price",
+    "head_bar_index",
+    "head_price",
+    "trough2_bar_index",
+    "trough2_price",
+    "RS_bar_index",
+    "RS_price",
+    "neckline_left_bar_index",
+    "neckline_left_price",
+    "neckline_right_bar_index",
+    "neckline_right_price",
+    "confirmation_bar_index",
+    "confirmation_price",
+    "confirm_rule",
+    "H",
+    "label_quality"
+  ],
+  "properties": {
+    "label_id": {
+      "type": "string",
+      "description": "Stable unique id, e.g. EURUSD_H1_top_2019-03-15_001"
+    },
+    "symbol": {
+      "type": "string",
+      "enum": ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"]
+    },
+    "timeframe": {
+      "type": "string",
+      "enum": ["H1", "H4", "D1"]
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["top", "inverse"]
+    },
+    "hard_negative": {
+      "type": "boolean",
+      "description": "true = must NOT be detected as valid H&S"
+    },
+    "hard_negative_reason": {
+      "type": ["string", "null"],
+      "description": "Required when hard_negative=true",
+      "enum": [
+        null,
+        "double_top",
+        "double_bottom",
+        "broadening",
+        "range_three_peak",
+        "false_break",
+        "missing_prior_trend",
+        "no_head_prominence",
+        "broken_sequence",
+        "excessive_neckline_slope",
+        "other"
+      ]
+    },
+    "LS_bar_index": { "type": "integer", "minimum": 0 },
+    "LS_price": { "type": "number" },
+    "LS_time": {
+      "type": ["string", "null"],
+      "description": "Optional ISO time; mirrors hs-spec LS_time"
+    },
+    "trough1_bar_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Left armpit (hs-spec left_armpit_*). Top: trough; inverse: intervening high."
+    },
+    "trough1_price": { "type": "number" },
+    "trough1_time": { "type": ["string", "null"] },
+    "head_bar_index": { "type": "integer", "minimum": 0 },
+    "head_price": { "type": "number" },
+    "head_time": { "type": ["string", "null"] },
+    "trough2_bar_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Right armpit (hs-spec right_armpit_*)"
+    },
+    "trough2_price": { "type": "number" },
+    "trough2_time": { "type": ["string", "null"] },
+    "RS_bar_index": { "type": "integer", "minimum": 0 },
+    "RS_price": { "type": "number" },
+    "RS_time": { "type": ["string", "null"] },
+    "neckline_left_bar_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Usually equals trough1_bar_index"
+    },
+    "neckline_left_price": { "type": "number" },
+    "neckline_right_bar_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Usually equals trough2_bar_index"
+    },
+    "neckline_right_price": { "type": "number" },
+    "confirmation_bar_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Bar whose CLOSE confirms (hs-spec confirm_time)"
+    },
+    "confirmation_price": {
+      "type": "number",
+      "description": "Confirm close price (hs-spec confirm_price)"
+    },
+    "confirm_rule": {
+      "type": "string",
+      "enum": ["close_beyond_neckline", "close_beyond_right_armpit"]
+    },
+    "retest_bar_index": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Optional; Mode B rejection bar"
+    },
+    "H": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "abs(head_extreme - neckline_price_at_head_time) per hs-spec"
+    },
+    "label_quality": {
+      "type": "string",
+      "enum": ["gold", "silver", "reject"]
+    },
+    "entry_mode": {
+      "type": ["string", "null"],
+      "enum": ["A", "B", null]
+    },
+    "entry_bar_index": {
+      "type": ["integer", "null"],
+      "description": "Mode A: confirmation bar (or next); Mode B: retest rejection bar"
+    },
+    "entry_price": { "type": ["number", "null"] },
+    "sl_price": { "type": ["number", "null"] },
+    "tp1_price": {
+      "type": ["number", "null"],
+      "description": "0.5 * H from confirmation/entry level"
+    },
+    "tp2_price": {
+      "type": ["number", "null"],
+      "description": "1.0 * H (or k*H) — tracked separately; not sole default"
+    },
+    "outcomes": {
+      "type": "object",
+      "description": "Prefer harness-computed outcomes; store hand values only if precomputed.",
+      "properties": {
+        "outcome_bars": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Lookahead N bars from entry for MFE/MAE/hits"
+        },
+        "hit_0_5H": { "type": ["boolean", "null"] },
+        "hit_1_0H": { "type": ["boolean", "null"] },
+        "mfe": {
+          "type": ["number", "null"],
+          "description": "Max favorable excursion in price units from entry"
+        },
+        "mae": {
+          "type": ["number", "null"],
+          "description": "Max adverse excursion in price units from entry (positive = adverse)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "false_positive": {
+      "type": ["boolean", "null"],
+      "description": "hs-spec optional; prefer hard_negative for reject-class rows"
+    },
+    "notes": { "type": ["string", "null"] },
+    "bars_file": {
+      "type": ["string", "null"],
+      "description": "Override bars basename, e.g. EURUSD_H1.csv"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "hard_negative": { "const": true } } },
+      "then": {
+        "required": ["hard_negative_reason"],
+        "properties": {
+          "hard_negative_reason": {
+            "not": { "type": "null" }
+          },
+          "label_quality": { "const": "reject" }
+        }
+      }
+    }
+  ],
+  "hs_spec_field_map": {
+    "LS_time": "LS_time or bars[LS_bar_index].time",
+    "LS_price": "LS_price",
+    "left_armpit_time": "trough1_time / trough1_bar_index",
+    "left_armpit_price": "trough1_price",
+    "head_time": "head_time / head_bar_index",
+    "head_price": "head_price",
+    "right_armpit_time": "trough2_time / trough2_bar_index",
+    "right_armpit_price": "trough2_price",
+    "RS_time": "RS_time / RS_bar_index",
+    "RS_price": "RS_price",
+    "confirm_time": "confirmation_bar_index → bar time",
+    "confirm_price": "confirmation_price",
+    "confirm_rule": "confirm_rule",
+    "H": "H",
+    "label_quality": "label_quality"
+  }
+}

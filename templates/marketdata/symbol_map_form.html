@@ -1,0 +1,20 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}{% if is_edit %}Edit symbol map{% else %}New symbol map{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" class="max-w-lg space-y-4">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label class="mb-1 block text-xs uppercase tracking-wide text-zinc-500" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<p class="mt-1 text-xs text-rose-400">{{ field.errors|striptags }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <div class="flex gap-3 pt-2">
+    <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">Save</button>
+    <a href="{% url 'marketdata:symbol_maps' %}" class="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300">Cancel</a>
+  </div>
+</form>
+{% endblock %}

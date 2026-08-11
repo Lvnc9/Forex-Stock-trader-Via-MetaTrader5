@@ -1,0 +1,11 @@
+synthetic/out/
+bars/*.csv
+!bars/README.md
+labels/filled/*.json
+reports/run_*/
+__pycache__/
+harness/__pycache__/
+harness/**/__pycache__/
+synthetic/__pycache__/
+*.pyc
+.DS_Store

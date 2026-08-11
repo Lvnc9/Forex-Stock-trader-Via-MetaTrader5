@@ -1,0 +1,17 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}New deployment{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-lg space-y-5">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label class="tb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for e in field.errors %}<p class="text-xs text-rose-400">{{ e }}</p>{% endfor %}
+    </div>
+  {% endfor %}
+  <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950">Continue to review</button>
+</form>
+{% endblock %}

@@ -1,0 +1,14 @@
+<div class="builder-row ind-row grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto]" data-index="{{ row.index }}">
+  <div><label class="tb-label">Id</label>{{ row.id }}</div>
+  <div><label class="tb-label">Fn</label>{{ row.fn }}</div>
+  <div><label class="tb-label">Source</label>{{ row.source }}</div>
+  <div><label class="tb-label">Period</label>{{ row.period }}</div>
+  <div><label class="tb-label">Period param</label>{{ row.period_param }}</div>
+  <div><label class="tb-label">Column</label>{{ row.column }}</div>
+  <div class="flex items-end pb-0.5">
+    <button type="button"
+            class="rounded border border-zinc-700 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            title="Remove row"
+            onclick="this.closest('.builder-row').remove()">−</button>
+  </div>
+</div>

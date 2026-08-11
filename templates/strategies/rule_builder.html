@@ -1,0 +1,138 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block header %}{% if strategy %}Edit rule strategy{% else %}New rule strategy{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-5xl space-y-10" hx-boost="false">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  {% if template_meta %}
+    <p class="text-sm text-zinc-400">Customizing template <span class="text-zinc-200">{{ template_meta.name }}</span> — logic is editable, not just knobs.</p>
+  {% endif %}
+
+  <section class="space-y-4">
+    <div>
+      <label class="tb-label" for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% for e in form.name.errors %}<p class="mt-1 text-xs text-rose-400">{{ e }}</p>{% endfor %}
+    </div>
+    <div>
+      <label class="tb-label" for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+    </div>
+  </section>
+
+  <section>
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Parameters</h2>
+      <button type="button"
+              class="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+              hx-get="{% url 'strategies:builder_row' kind='param' %}"
+              hx-target="#param-rows"
+              hx-swap="beforeend"
+              hx-on::config-request="
+                const rows = [...document.querySelectorAll('#param-rows .builder-row')];
+                const next = rows.reduce((m, el) => Math.max(m, (+el.dataset.index || 0) + 1), 0);
+                if (next >= {{ max_params }}) { event.preventDefault(); return; }
+                event.detail.parameters.set('index', next);
+              ">
+        + Add parameter
+      </button>
+    </div>
+    <div id="param-rows" class="space-y-3">
+      {% for row in param_rows %}
+        {% include "strategies/_param_row.html" with row=row %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Indicators</h2>
+      <button type="button"
+              class="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+              hx-get="{% url 'strategies:builder_row' kind='indicator' %}"
+              hx-target="#ind-rows"
+              hx-swap="beforeend"
+              hx-on::config-request="
+                const rows = [...document.querySelectorAll('#ind-rows .builder-row')];
+                const next = rows.reduce((m, el) => Math.max(m, (+el.dataset.index || 0) + 1), 0);
+                if (next >= {{ max_indicators }}) { event.preventDefault(); return; }
+                event.detail.parameters.set('index', next);
+              ">
+        + Add indicator
+      </button>
+    </div>
+    <div id="ind-rows" class="space-y-3">
+      {% for row in ind_rows %}
+        {% include "strategies/_indicator_row.html" with row=row %}
+      {% endfor %}
+    </div>
+  </section>
+
+  {% for group in group_rows %}
+    <section>
+      <div class="mb-3 flex flex-wrap items-end justify-between gap-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ group.label }}</h2>
+        <div class="flex items-end gap-3">
+          <div class="w-32"><label class="tb-label">Logic</label>{{ group.logic }}</div>
+          <button type="button"
+                  class="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+                  hx-get="{% url 'strategies:builder_row' kind='rule' %}?group={{ group.key }}"
+                  hx-target="#{{ group.key }}-rows"
+                  hx-swap="beforeend"
+                  hx-on::config-request="
+                    const rows = [...document.querySelectorAll('#{{ group.key }}-rows .builder-row')];
+                    const next = rows.reduce((m, el) => Math.max(m, (+el.dataset.index || 0) + 1), 0);
+                    if (next >= {{ max_rules }}) { event.preventDefault(); return; }
+                    event.detail.parameters.set('index', next);
+                  ">
+            + Add rule
+          </button>
+        </div>
+      </div>
+      <div id="{{ group.key }}-rows" class="space-y-4">
+        {% for rule in group.rules %}
+          {% include "strategies/_rule_row.html" with row=rule %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+
+  <section class="grid gap-6 sm:grid-cols-2">
+    <div class="space-y-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Stop loss</h2>
+      <div><label class="tb-label">Type</label>{{ form.stop_type }}</div>
+      <div><label class="tb-label">Percent</label>{{ form.stop_pct }}</div>
+      <div><label class="tb-label">ATR mult</label>{{ form.stop_atr_mult }}</div>
+      <div><label class="tb-label">ATR period</label>{{ form.stop_atr_period }}</div>
+    </div>
+    <div class="space-y-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Take profit</h2>
+      <div><label class="tb-label">Type</label>{{ form.tp_type }}</div>
+      <div><label class="tb-label">Percent</label>{{ form.tp_pct }}</div>
+      <div><label class="tb-label">R:R</label>{{ form.tp_rr }}</div>
+    </div>
+  </section>
+
+  <p class="text-xs text-zinc-600">
+    Dry-run validation runs against synthetic bars before save.
+    Refs: indicator / price / value / param / pct_offset / arith.
+    Indicator source <span class="text-zinc-400">HTF</span> needs an HTF timeframe on backtest or deploy.
+    Use <span class="text-zinc-400">+</span> to add rows (ceilings: {{ max_params }} params / {{ max_indicators }} indicators / {{ max_rules }} rules per group).
+  </p>
+
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
+      {% if strategy %}Save rule strategy{% else %}Create rule strategy{% endif %}
+    </button>
+    <a href="{% url 'strategies:list' %}" class="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800">Cancel</a>
+  </div>
+</form>
+{% endblock %}

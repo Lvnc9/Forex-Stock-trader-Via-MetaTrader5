@@ -1,0 +1,53 @@
+[
+  {
+    "outcome_bars": 50,
+    "entry_bar_index": 257,
+    "entry_price": 1.0791000000000017,
+    "H": 0.009649999999999492,
+    "tp_0_5H": 1.0839250000000016,
+    "tp_kH": 1.0840215000000015,
+    "tp_1_0H": 1.0887500000000012,
+    "tp2_mult_h": 0.51,
+    "hit_0_5H": true,
+    "hit_kH": true,
+    "hit_1_0H": false,
+    "mfe": 0.007249999999998202,
+    "mae": 0.00020000000000175433,
+    "error": null,
+    "label_id": "SYNTH_H1_inverse_geom_001"
+  },
+  {
+    "outcome_bars": 50,
+    "entry_bar_index": 700,
+    "entry_price": 1.1004800000000003,
+    "H": 0.01118181818181685,
+    "tp_0_5H": 1.094889090909092,
+    "tp_kH": 1.0947772727272738,
+    "tp_1_0H": 1.0892981818181835,
+    "tp2_mult_h": 0.51,
+    "hit_0_5H": true,
+    "hit_kH": true,
+    "hit_1_0H": false,
+    "mfe": 0.005800000000000249,
+    "mae": 0.00019999999999975593,
+    "error": null,
+    "label_id": "SYNTH_H1_top_down_neck_001"
+  },
+  {
+    "outcome_bars": 50,
+    "entry_bar_index": 87,
+    "entry_price": 1.0989,
+    "H": 0.010299999999999976,
+    "tp_0_5H": 1.09375,
+    "tp_kH": 1.093647,
+    "tp_1_0H": 1.0886,
+    "tp2_mult_h": 0.51,
+    "hit_0_5H": true,
+    "hit_kH": true,
+    "hit_1_0H": false,
+    "mfe": 0.010099999999999998,
+    "mae": 0.00019999999999997797,
+    "error": null,
+    "label_id": "SYNTH_H1_top_geom_001"
+  }
+]

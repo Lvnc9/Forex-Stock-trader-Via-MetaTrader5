@@ -1,0 +1,23 @@
+[
+  {
+    "label_id": "SYNTH_H1_inverse_geom_001",
+    "detection_id": "det_SYNTH_H1_inverse_geom_001",
+    "head_bar_delta": 0,
+    "entry_bar_delta": 0,
+    "entry_matched": true
+  },
+  {
+    "label_id": "SYNTH_H1_top_down_neck_001",
+    "detection_id": "det_SYNTH_H1_top_down_neck_001",
+    "head_bar_delta": 0,
+    "entry_bar_delta": 0,
+    "entry_matched": true
+  },
+  {
+    "label_id": "SYNTH_H1_top_geom_001",
+    "detection_id": "det_SYNTH_H1_top_geom_001",
+    "head_bar_delta": 0,
+    "entry_bar_delta": 0,
+    "entry_matched": true
+  }
+]

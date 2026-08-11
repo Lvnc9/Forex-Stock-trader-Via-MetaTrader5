@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-08-11T09:58:07.307262+00:00",
+  "entry_mode": "A",
+  "match_tol_bars": 5,
+  "outcome_bars": 50,
+  "tp2_mult_h": 0.51,
+  "outcomes_on": "true_all",
+  "n_labels": 5,
+  "n_detections": 3,
+  "detection_metrics": {
+    "n_true_labels": 3,
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "missed_label_ids": [],
+    "false_accept_label_ids": [],
+    "unmatched_detection_ids": [],
+    "entry_bar_match_rate": 1.0,
+    "entry_bar_match_n": 3,
+    "entry_bar_match_hits": 3
+  },
+  "tp_metrics": {
+    "n_labels_with_outcomes": 3,
+    "tp2_mult_h": 0.51,
+    "hit_0_5H_rate": 1.0,
+    "hit_kH_rate": 1.0,
+    "hit_1_0H_rate": 0.0,
+    "hit_0_5H_count": 3,
+    "hit_kH_count": 3,
+    "hit_1_0H_count": 0,
+    "note": "Rates computed on OUR bars from label entry; not Bulkowski equity figures."
+  },
+  "premature_entry_metrics": {
+    "n_premature_test_labels": 0,
+    "premature_violations": 0,
+    "premature_entry_rate": null,
+    "note": "No premature_entry_test labels found"
+  },
+  "detector_premature_metrics": {
+    "n_detections_with_entry": 3,
+    "premature_count": 0,
+    "premature_rate": 0.0
+  },
+  "spec_ref": "hs-curriculum/hs-spec.v1.json",
+  "l0_ref": "hs-curriculum/L0-diagnosis.md"
+}
