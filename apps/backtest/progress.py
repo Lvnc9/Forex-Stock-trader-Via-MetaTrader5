@@ -8,21 +8,62 @@ from django.utils import timezone
 
 from apps.backtest.constants import ORPHAN_RUNNING_MINUTES
 
+LIVE_EQUITY_TAIL_MAX = 300
 
-def update_run_progress(run, pct: float, message: str = "") -> None:
-    """Persist coarse progress on *run* without clobbering completed status."""
+
+def _active_run_qs(pk: int):
     from apps.backtest.models import BacktestRun
 
-    if run.status not in (BacktestRun.Status.PENDING, BacktestRun.Status.RUNNING):
-        return
-    run.progress_pct = max(0.0, min(100.0, float(pct)))
-    run.progress_message = (message or "")[:240]
-    run.save(update_fields=["progress_pct", "progress_message"])
+    return BacktestRun.objects.filter(
+        pk=pk,
+        status__in=(BacktestRun.Status.PENDING, BacktestRun.Status.RUNNING),
+    )
+
+
+def update_run_progress(run, pct: float, message: str = "") -> bool:
+    """Persist coarse progress on *run* without clobbering completed status."""
+    updated = _active_run_qs(run.pk).update(
+        progress_pct=max(0.0, min(100.0, float(pct))),
+        progress_message=(message or "")[:240],
+    )
+    if updated:
+        run.progress_pct = max(0.0, min(100.0, float(pct)))
+        run.progress_message = (message or "")[:240]
+    return bool(updated)
+
+
+def update_run_live_snapshot(
+    run,
+    *,
+    pct: float,
+    message: str,
+    trades: list[dict],
+    metrics: dict,
+    equity_curve_tail: list[dict],
+) -> bool:
+    """Persist partial trades/metrics/equity while a run is active."""
+    tail = equity_curve_tail[-LIVE_EQUITY_TAIL_MAX:]
+    updated = _active_run_qs(run.pk).update(
+        progress_pct=max(0.0, min(100.0, float(pct))),
+        progress_message=(message or "")[:240],
+        trades=trades,
+        metrics=metrics,
+        equity_curve=tail,
+    )
+    if updated:
+        run.progress_pct = max(0.0, min(100.0, float(pct)))
+        run.progress_message = (message or "")[:240]
+        run.trades = trades
+        run.metrics = metrics
+        run.equity_curve = tail
+    return bool(updated)
 
 
 def mark_running(run) -> None:
     from apps.backtest.models import BacktestRun
 
+    if not BacktestRun.objects.filter(pk=run.pk).exists():
+        return
     run.status = BacktestRun.Status.RUNNING
     run.progress_pct = 0.0
     run.progress_message = "Starting"

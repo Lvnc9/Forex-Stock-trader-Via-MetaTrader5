@@ -49,6 +49,7 @@ class BacktestRunner:
         contract_size: float = DEFAULT_CONTRACT_SIZE,
         warmup: int | None = None,
         progress_callback: Callable[[float, str], None] | None = None,
+        snapshot_callback: Callable[..., None] | None = None,
         timeframe_meta: dict | None = None,
     ) -> BacktestResult:
         if bars.empty:
@@ -89,11 +90,31 @@ class BacktestRunner:
 
         # Progress stride for long runs (avoid DB write storms from callers).
         stride = max(n // 20, 1)
+        last_trade_count = 0
+
+        def maybe_snapshot(i: int, bar: pd.Series, *, force: bool = False) -> None:
+            if snapshot_callback is None:
+                return
+            pct = 60.0 + (i + 1) / n * 35.0
+            trade_count = len(portfolio.trades)
+            if force and trade_count > 0:
+                message = f"Trade {trade_count}"
+            else:
+                message = f"Bar {i + 1}/{n}"
+            snapshot_callback(
+                pct,
+                message,
+                portfolio,
+                equity_curve,
+                float(bar["close"]),
+                force=force,
+            )
 
         for i in range(n):
             bar = bars.iloc[i]
             ts = bars.index[i]
             ready = i + 1 >= min_bars
+            trades_before = len(portfolio.trades)
 
             if ready:
                 portfolio.maybe_intrabar_exit(bar, ts)
@@ -105,15 +126,26 @@ class BacktestRunner:
                 {"t": ts.isoformat(), "equity": round(portfolio.equity(float(bar["close"])), 4)}
             )
 
+            new_trades = len(portfolio.trades) > trades_before
+            if new_trades:
+                last_trade_count = len(portfolio.trades)
+                maybe_snapshot(i, bar, force=True)
+            elif snapshot_callback is not None and (i % stride == 0 or i == n - 1):
+                maybe_snapshot(i, bar)
+
             if progress_callback is not None and (i % stride == 0 or i == n - 1):
                 report(60.0 + (i + 1) / n * 35.0, f"Bar {i + 1}/{n}")
 
         if portfolio.position is not None:
             last_bar = bars.iloc[-1]
             ts = bars.index[-1]
+            trades_before = len(portfolio.trades)
             portfolio.force_close(last_bar, ts, "end_of_data")
             if equity_curve:
                 equity_curve[-1]["equity"] = round(portfolio.cash, 4)
+            if len(portfolio.trades) > trades_before:
+                last_trade_count = len(portfolio.trades)
+                maybe_snapshot(n - 1, last_bar, force=True)
 
         report(96.0, "Computing metrics")
         curve = downsample_equity(equity_curve, EQUITY_CURVE_MAX_POINTS)

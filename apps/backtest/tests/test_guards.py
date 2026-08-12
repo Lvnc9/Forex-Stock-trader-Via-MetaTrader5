@@ -118,6 +118,8 @@ class MaxBarsGuardTests(SimpleTestCase):
         with patch("apps.backtest.services.fail_orphaned_runs"), patch(
             "apps.backtest.services.mark_running"
         ), patch("apps.backtest.services.update_run_progress"), patch(
+            "apps.backtest.services._run_exists", return_value=True
+        ), patch(
             "apps.backtest.services.timezone"
         ) as tz:
             tz.make_aware.side_effect = lambda dt: dt

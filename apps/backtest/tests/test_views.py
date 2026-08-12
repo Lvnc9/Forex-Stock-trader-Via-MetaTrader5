@@ -52,7 +52,7 @@ class BacktestCreateViewTests(TestCase):
         self.assertNotIn("strategy", resp.context["form"].initial)
         self.assertNotIn("prefill_strategy", resp.context)
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, TRADEBOT_BACKTEST_BLOCKING_EAGER=True)
     def test_create_redirects_to_detail(self) -> None:
         get_resp = self.client.get(reverse("backtest:create") + f"?strategy={self.strategy.pk}")
         slug = get_resp.context["form"].fields["catalog_slug"].choices[0][0]
@@ -174,6 +174,10 @@ class BacktestDetailViewTests(TestCase):
         self.assertIn("Simulating", content)
         self.assertIn("42", content)
         self.assertIn(reverse("backtest:status", kwargs={"pk": run.pk}), content)
+        self.assertIn("Current balance", content)
+        self.assertIn("Win rate", content)
+        self.assertIn("Trades", content)
+        self.assertIn("tbApplyBacktestStatus", content)
 
     def test_detail_pending_shows_worker_hint(self) -> None:
         run = BacktestRun.objects.create(
@@ -219,3 +223,84 @@ class BacktestDetailViewTests(TestCase):
         self.assertEqual(data["initial_balance"], 10000.0)
         self.assertEqual(data["final_balance"], 10350.0)
         self.assertEqual(data["win_rate_pct"], 55.0)
+        self.assertEqual(data["trade_count"], 1)
+        self.assertIn("metrics", data)
+        self.assertIn("trades", data)
+
+    def test_status_json_live_fields_while_running(self) -> None:
+        run = BacktestRun.objects.create(
+            strategy=self.strategy,
+            catalog_slug="eurusd",
+            timeframe="M5",
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 2),
+            initial_balance=10_000,
+            status=BacktestRun.Status.RUNNING,
+            progress_pct=55.0,
+            progress_message="Trade 2",
+            metrics={
+                "win_rate_pct": 50.0,
+                "net_return_pct": 1.0,
+                "profit_factor": 1.1,
+                "max_drawdown_pct": 0.5,
+                "trade_count": 2,
+                "winning_trades": 1,
+                "losing_trades": 1,
+                "final_balance": 10_100.0,
+            },
+            trades=[
+                {
+                    "entry_time": "2024-01-01T10:00:00+00:00",
+                    "exit_time": "2024-01-01T11:00:00+00:00",
+                    "side": "long",
+                    "entry_price": 1.0,
+                    "exit_price": 1.01,
+                    "pnl": 50.0,
+                    "exit_reason": "signal_exit",
+                },
+                {
+                    "entry_time": "2024-01-01T12:00:00+00:00",
+                    "exit_time": "2024-01-01T13:00:00+00:00",
+                    "side": "short",
+                    "entry_price": 1.01,
+                    "exit_price": 1.02,
+                    "pnl": -50.0,
+                    "exit_reason": "stop_loss",
+                },
+            ],
+        )
+        resp = self.client.get(reverse("backtest:status", kwargs={"pk": run.pk}))
+        data = resp.json()
+        self.assertFalse(data["done"])
+        self.assertEqual(data["current_balance"], 10_100.0)
+        self.assertEqual(data["trade_count"], 2)
+        self.assertEqual(len(data["trades"]), 2)
+        self.assertEqual(data["metrics"]["win_rate_pct"], 50.0)
+
+    def test_delete_completed_run(self) -> None:
+        run = self._completed_run()
+        resp = self.client.post(reverse("backtest:delete", kwargs={"pk": run.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse("backtest:list"))
+        self.assertFalse(BacktestRun.objects.filter(pk=run.pk).exists())
+
+    def test_delete_running_run_blocked(self) -> None:
+        run = BacktestRun.objects.create(
+            strategy=self.strategy,
+            catalog_slug="eurusd",
+            timeframe="M5",
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 2),
+            initial_balance=10_000,
+            status=BacktestRun.Status.RUNNING,
+        )
+        resp = self.client.post(reverse("backtest:delete", kwargs={"pk": run.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(BacktestRun.objects.filter(pk=run.pk).exists())
+
+    def test_list_shows_delete_for_completed(self) -> None:
+        run = self._completed_run()
+        resp = self.client.get(reverse("backtest:list"))
+        content = resp.content.decode()
+        self.assertIn(reverse("backtest:delete", kwargs={"pk": run.pk}), content)
+        self.assertIn("Delete", content)

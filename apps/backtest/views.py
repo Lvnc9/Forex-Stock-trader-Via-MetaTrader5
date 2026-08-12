@@ -164,6 +164,11 @@ class BacktestDetailView(DetailView):
             BacktestRun.Status.PENDING,
             BacktestRun.Status.RUNNING,
         )
+        ctx["can_delete"] = run.status in (
+            BacktestRun.Status.COMPLETED,
+            BacktestRun.Status.FAILED,
+        )
+        ctx["current_balance"] = metrics.get("final_balance")
         return ctx
 
 
@@ -173,7 +178,10 @@ class BacktestStatusView(View):
 
     def get(self, request, pk: int):
         run = get_object_or_404(BacktestRun, pk=pk)
-        metrics = run.metrics or {}
+        metrics = dict(run.metrics or {})
+        open_position = metrics.pop("open_position", None)
+        current_balance = metrics.get("final_balance")
+        trades = run.trades or []
         return JsonResponse(
             {
                 "id": run.pk,
@@ -181,13 +189,35 @@ class BacktestStatusView(View):
                 "progress_pct": run.progress_pct,
                 "progress_message": run.progress_message,
                 "error_message": run.error_message,
-                "win_rate_pct": run.win_rate_pct,
+                "win_rate_pct": metrics.get("win_rate_pct"),
                 "initial_balance": float(run.initial_balance),
+                "current_balance": current_balance,
                 "final_balance": metrics.get("final_balance"),
+                "metrics": metrics,
+                "trades": trades,
+                "trade_count": len(trades),
+                "open_position": open_position,
                 "done": run.status
                 in (BacktestRun.Status.COMPLETED, BacktestRun.Status.FAILED),
             }
         )
+
+
+@method_decorator(login_required, name="dispatch")
+class BacktestDeleteView(View):
+    def post(self, request, pk: int):
+        run = get_object_or_404(BacktestRun, pk=pk)
+        if run.status in (BacktestRun.Status.PENDING, BacktestRun.Status.RUNNING):
+            messages.error(
+                request,
+                "Cannot delete a backtest while it is still running. "
+                "Wait for completion or let orphan cleanup fail stuck runs.",
+            )
+            return redirect("backtest:list")
+        label = f"{run.strategy.name} · {run.catalog_slug}"
+        run.delete()
+        messages.success(request, f"Deleted backtest {label}.")
+        return redirect("backtest:list")
 
 
 @method_decorator(login_required, name="dispatch")

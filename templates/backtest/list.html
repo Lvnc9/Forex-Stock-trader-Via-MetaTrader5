@@ -39,6 +39,7 @@
           <th class="px-4 py-3 font-medium">Status</th>
           <th class="px-4 py-3 font-medium text-right">Win rate</th>
           <th class="px-4 py-3 font-medium text-right">Return</th>
+          <th class="px-4 py-3 font-medium text-right">Actions</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-zinc-800 bg-zinc-950/40">
@@ -69,6 +70,17 @@
             </td>
             <td class="px-4 py-3 text-right tabular-nums text-zinc-300">
               {% if run.metrics and run.metrics.net_return_pct != None %}{{ run.metrics.net_return_pct }}%{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if run.status == "completed" or run.status == "failed" %}
+                <form method="post" action="{% url 'backtest:delete' run.pk %}" class="inline"
+                      onsubmit="return confirm('Delete this backtest?');">
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs text-rose-400 hover:text-rose-300">Delete</button>
+                </form>
+              {% else %}
+                <span class="text-xs text-zinc-600">Running…</span>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

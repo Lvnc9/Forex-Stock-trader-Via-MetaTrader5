@@ -1,7 +1,7 @@
 """
 Backtest task queue.
 
-Default: CELERY_TASK_ALWAYS_EAGER=True (sync, no Redis needed).
+Default: CELERY_TASK_ALWAYS_EAGER=True (non-blocking thread in dev, no Redis needed).
 Production async (keeps Django UI responsive on large M1 sets):
   export CELERY_TASK_ALWAYS_EAGER=False
   redis-server
@@ -9,6 +9,8 @@ Production async (keeps Django UI responsive on large M1 sets):
 """
 
 from __future__ import annotations
+
+import threading
 
 from celery import shared_task
 
@@ -32,12 +34,31 @@ def run_sweep_task(self, run_ids: list[int]) -> list[int]:
     return list(run_ids)
 
 
-def enqueue_backtest(run: BacktestRun) -> BacktestRun:
-    """Queue (or eagerly run) a backtest. Returns the run after sync eager mode."""
+def _blocking_eager(blocking: bool | None) -> bool:
     from django.conf import settings
 
-    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", True):
-        return execute_backtest(run)
+    if blocking is not None:
+        return blocking
+    return bool(getattr(settings, "TRADEBOT_BACKTEST_BLOCKING_EAGER", False))
+
+
+def _execute_backtest_thread(run: BacktestRun) -> None:
+    from django.db import close_old_connections
+
+    close_old_connections()
+    execute_backtest(run)
+
+
+def enqueue_backtest(run: BacktestRun, *, blocking: bool | None = None) -> BacktestRun:
+    """Queue (or eagerly run) a backtest. Returns immediately unless blocking=True."""
+    from django.conf import settings
+
+    eager = getattr(settings, "CELERY_TASK_ALWAYS_EAGER", True)
+    if eager:
+        if _blocking_eager(blocking):
+            return execute_backtest(run)
+        threading.Thread(target=_execute_backtest_thread, args=(run,), daemon=True).start()
+        return run
     run_backtest_task.delay(run.pk)
     return run
 
