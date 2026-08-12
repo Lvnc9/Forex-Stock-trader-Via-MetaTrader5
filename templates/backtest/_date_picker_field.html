@@ -1,0 +1,102 @@
+<div
+  x-data="tradebotDatePicker({
+    inputId: '{{ field.id_for_label|escapejs }}',
+    initialValue: '{{ field.value|default_if_none:""|escapejs }}',
+    placeholder: '{{ field.field.widget.attrs.placeholder|default:"Select date"|escapejs }}'
+  })"
+  class="relative"
+>
+  <label class="tb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  <div class="sr-only">
+    {{ field }}
+  </div>
+
+  {# ── Trigger button ── #}
+  <button
+    type="button"
+    class="sw-cal-trigger"
+    @click="toggle()"
+    :aria-expanded="open.toString()"
+    aria-haspopup="dialog"
+  >
+    <span
+      :class="selectedValue ? 'sw-cal-trigger-text--filled' : 'sw-cal-trigger-text--empty'"
+      x-text="triggerText()"
+    ></span>
+    <svg class="sw-cal-trigger-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2ZM4.75 5.5c-.69 0-1.25.56-1.25 1.25v8.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-8.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd"/>
+      <path d="M7 10a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
+    </svg>
+  </button>
+
+  {# ── Calendar popup ── #}
+  <div
+    x-show="open"
+    x-transition:enter="sw-cal-enter"
+    x-transition:enter-start="sw-cal-enter-from"
+    x-transition:enter-end="sw-cal-enter-to"
+    x-transition:leave="sw-cal-leave"
+    x-transition:leave-start="sw-cal-enter-to"
+    x-transition:leave-end="sw-cal-enter-from"
+    class="sw-cal-panel"
+    role="dialog"
+    aria-label="Choose date"
+    @click.outside="open = false"
+    @keydown.escape.window="open = false"
+  >
+    {# Neon top edge #}
+    <div class="sw-cal-top-edge"></div>
+
+    {# Month / Year selectors row #}
+    <div class="sw-cal-nav">
+      <button type="button" class="sw-cal-nav-btn" @click="shiftMonth(-1)" aria-label="Previous month">
+        <svg viewBox="0 0 16 16" fill="currentColor" class="sw-cal-nav-chevron"><path fill-rule="evenodd" d="M11.354 3.354a.5.5 0 0 0-.708-.708l-5 5a.5.5 0 0 0 0 .708l5 5a.5.5 0 0 0 .708-.708L6.707 8l4.647-4.646Z" clip-rule="evenodd"/></svg>
+      </button>
+      <div class="sw-cal-selects">
+        <select class="sw-cal-select" :value="viewMonth" @change="viewMonth = Number($event.target.value)">
+          <template x-for="m in months" :key="m.value">
+            <option :value="m.value" x-text="m.label" :selected="m.value === viewMonth"></option>
+          </template>
+        </select>
+        <select class="sw-cal-select" :value="viewYear" @change="viewYear = Number($event.target.value)">
+          <template x-for="y in years()" :key="y">
+            <option :value="y" x-text="y" :selected="y === viewYear"></option>
+          </template>
+        </select>
+      </div>
+      <button type="button" class="sw-cal-nav-btn" @click="shiftMonth(1)" aria-label="Next month">
+        <svg viewBox="0 0 16 16" fill="currentColor" class="sw-cal-nav-chevron"><path fill-rule="evenodd" d="M4.646 12.646a.5.5 0 0 0 .708.708l5-5a.5.5 0 0 0 0-.708l-5-5a.5.5 0 0 0-.708.708L9.293 8 4.646 12.646Z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+    {# Weekday header #}
+    <div class="sw-cal-weekdays">
+      <template x-for="w in weekdays" :key="w">
+        <span class="sw-cal-weekday" x-text="w"></span>
+      </template>
+    </div>
+
+    {# Day grid #}
+    <div class="sw-cal-grid">
+      <template x-for="(cell, idx) in cells()" :key="idx">
+        <template x-if="cell.inMonth">
+          <button type="button" class="sw-cal-day" :class="dayClasses(cell.day)" @click="selectDay(cell.day)" x-text="cell.day"></button>
+        </template>
+      </template>
+      <template x-for="(cell, idx) in cells()" :key="'e'+idx">
+        <template x-if="!cell.inMonth">
+          <span class="sw-cal-day-empty"></span>
+        </template>
+      </template>
+    </div>
+
+    {# Footer #}
+    <div class="sw-cal-footer">
+      <button type="button" class="sw-cal-footer-clear" @click="clear()">Clear</button>
+      <div class="sw-cal-footer-right">
+        <button type="button" class="sw-cal-footer-today" @click="setToday()">Today</button>
+        <button type="button" class="sw-cal-footer-done" @click="open = false">Done</button>
+      </div>
+    </div>
+  </div>
+</div>

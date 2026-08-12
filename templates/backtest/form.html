@@ -20,6 +20,9 @@
 
   {% for field in form %}
     <div>
+    {% if field.name == "start" or field.name == "end" %}
+      {% include "backtest/_date_picker_field.html" with field=field %}
+    {% else %}
       <label class="tb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
       {% if field.name == "thermal_profile" %}
         <div class="mt-2 space-y-2">
@@ -44,13 +47,14 @@
       {% else %}
         {{ field }}
       {% endif %}
-      {% if field.help_text %}
-        <p class="mt-1 text-xs text-zinc-500">{{ field.help_text }}</p>
-      {% endif %}
-      {% for error in field.errors %}
-        <p class="mt-1 text-xs text-rose-400">{{ error }}</p>
-      {% endfor %}
-    </div>
+    {% endif %}
+    {% if field.help_text %}
+      <p class="mt-1 text-xs text-zinc-500">{{ field.help_text }}</p>
+    {% endif %}
+    {% for error in field.errors %}
+      <p class="mt-1 text-xs text-rose-400">{{ error }}</p>
+    {% endfor %}
+  </div>
   {% endfor %}
 
   <p class="text-xs text-zinc-600">
@@ -76,4 +80,5 @@
     </a>
   </div>
 </form>
+{% include "backtest/_date_picker_assets.html" %}
 {% endblock %}

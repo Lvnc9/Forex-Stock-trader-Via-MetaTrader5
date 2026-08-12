@@ -47,8 +47,22 @@ class BacktestRunForm(forms.ModelForm):
             "thermal_profile",
         ]
         widgets = {
-            "start": forms.DateInput(attrs={"type": "date", "class": "tb-input"}),
-            "end": forms.DateInput(attrs={"type": "date", "class": "tb-input"}),
+            "start": forms.TextInput(
+                attrs={
+                    "class": "tb-input tb-date-input",
+                    "autocomplete": "off",
+                    "placeholder": "Select start date",
+                    "data-datepicker": "date",
+                }
+            ),
+            "end": forms.TextInput(
+                attrs={
+                    "class": "tb-input tb-date-input",
+                    "autocomplete": "off",
+                    "placeholder": "Select end date",
+                    "data-datepicker": "date",
+                }
+            ),
             "strategy": forms.Select(attrs={"class": "tb-input"}),
             "catalog_slug": forms.Select(attrs={"class": "tb-input"}),
             "timeframe": forms.Select(attrs={"class": "tb-input"}),

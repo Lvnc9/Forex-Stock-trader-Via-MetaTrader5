@@ -1,0 +1,127 @@
+<script>
+  (function () {
+    function registerTradebotDatePicker() {
+      if (!window.Alpine || window.tradebotDatePickerRegistered) {
+        return;
+      }
+      window.tradebotDatePickerRegistered = true;
+
+      Alpine.data("tradebotDatePicker", ({ inputId, initialValue, placeholder }) => ({
+        open: false,
+        inputId,
+        selectedValue: initialValue || "",
+        placeholder: placeholder || "Select date",
+        months: [
+          { value: 1, label: "Jan" },
+          { value: 2, label: "Feb" },
+          { value: 3, label: "Mar" },
+          { value: 4, label: "Apr" },
+          { value: 5, label: "May" },
+          { value: 6, label: "Jun" },
+          { value: 7, label: "Jul" },
+          { value: 8, label: "Aug" },
+          { value: 9, label: "Sep" },
+          { value: 10, label: "Oct" },
+          { value: 11, label: "Nov" },
+          { value: 12, label: "Dec" },
+        ],
+        viewYear: 2000,
+        viewMonth: 1,
+        weekdays: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+        init() {
+          var input = document.getElementById(this.inputId);
+          var val = (input && input.value) ? input.value : this.selectedValue;
+          this.selectedValue = val || "";
+          this.syncView(this.selectedValue);
+          if (input) {
+            input.value = this.selectedValue;
+          }
+        },
+        toggle() {
+          this.open = !this.open;
+          if (this.open) this.syncView(this.selectedValue);
+        },
+        parse(v) {
+          if (!v) return null;
+          var p = v.split("-").map(Number);
+          if (p.length !== 3 || p.some(Number.isNaN)) return null;
+          return { year: p[0], month: p[1], day: p[2] };
+        },
+        pad(n) { return String(n).padStart(2, "0"); },
+        formatIso(y, m, d) { return y + "-" + this.pad(m) + "-" + this.pad(d); },
+        formatDisplay(v) {
+          if (!v) return this.placeholder;
+          var p = this.parse(v);
+          if (!p) return this.placeholder;
+          var d = new Date(p.year, p.month - 1, p.day, 12);
+          return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+        },
+        triggerText() { return this.formatDisplay(this.selectedValue); },
+        years() {
+          var out = [];
+          var center = this.viewYear || new Date().getFullYear();
+          for (var y = center - 30; y <= center + 10; y++) out.push(y);
+          return out;
+        },
+        syncView(v) {
+          var p = this.parse(v);
+          if (p) { this.viewYear = p.year; this.viewMonth = p.month; return; }
+          var n = new Date();
+          this.viewYear = n.getFullYear();
+          this.viewMonth = n.getMonth() + 1;
+        },
+        shiftMonth(delta) {
+          var d = new Date(this.viewYear, this.viewMonth - 1 + delta, 1);
+          this.viewYear = d.getFullYear();
+          this.viewMonth = d.getMonth() + 1;
+        },
+        cells() {
+          var first = new Date(this.viewYear, this.viewMonth - 1, 1);
+          var pad = first.getDay();
+          var dim = new Date(this.viewYear, this.viewMonth, 0).getDate();
+          var out = [];
+          for (var i = 0; i < pad; i++) out.push({ inMonth: false, day: null });
+          for (var d = 1; d <= dim; d++) out.push({ inMonth: true, day: d });
+          while (out.length % 7 !== 0) out.push({ inMonth: false, day: null });
+          return out;
+        },
+        isSelected(day) {
+          var p = this.parse(this.selectedValue);
+          return p && p.year === this.viewYear && p.month === this.viewMonth && p.day === day;
+        },
+        isToday(day) {
+          var n = new Date();
+          return n.getFullYear() === this.viewYear && n.getMonth() + 1 === this.viewMonth && n.getDate() === day;
+        },
+        dayClasses(day) {
+          if (this.isSelected(day)) return "sw-cal-day--selected";
+          if (this.isToday(day)) return "sw-cal-day--today";
+          return "";
+        },
+        writeValue(v) {
+          this.selectedValue = v;
+          var input = document.getElementById(this.inputId);
+          if (input) {
+            input.value = v;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        },
+        selectDay(day) {
+          this.writeValue(this.formatIso(this.viewYear, this.viewMonth, day));
+          this.open = false;
+        },
+        clear() { this.writeValue(""); this.open = false; },
+        setToday() {
+          var n = new Date();
+          this.viewYear = n.getFullYear();
+          this.viewMonth = n.getMonth() + 1;
+          this.writeValue(this.formatIso(n.getFullYear(), n.getMonth() + 1, n.getDate()));
+        },
+      }));
+    }
+
+    document.addEventListener("alpine:init", registerTradebotDatePicker);
+    registerTradebotDatePicker();
+  })();
+</script>
