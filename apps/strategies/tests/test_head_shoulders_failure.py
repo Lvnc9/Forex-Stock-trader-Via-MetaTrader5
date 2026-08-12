@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 import pandas as pd
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from apps.strategies.engine import SignalEngine
 from apps.strategies.library.head_and_shoulders_failure import HeadAndShouldersFailureStrategy
@@ -185,6 +185,17 @@ class HeadShouldersFailureStrategyTests(SimpleTestCase):
         n = len(strategy._entries_by_bar)
         strategy.prepare(self.bars)
         self.assertEqual(len(strategy._entries_by_bar), n)
+
+    @override_settings(TRADEBOT_BACKTEST_PARALLEL_HS=False)
+    def test_parallel_detect_matches_sequential(self) -> None:
+        bars = bars_from_dataframe(self.bars)
+        spec = spec_from_parameters({"min_score": 40, "max_bust_atr": 3.0})
+        sequential = detect_on_bars(bars, "EURUSD", "H1", spec, trade_mode="failure")
+        with override_settings(TRADEBOT_BACKTEST_PARALLEL_HS=True):
+            parallel = detect_on_bars(bars, "EURUSD", "H1", spec, trade_mode="failure")
+        seq_keys = [(d["direction"], d["head_bar_index"], d["entry_bar_index"]) for d in sequential]
+        par_keys = [(d["direction"], d["head_bar_index"], d["entry_bar_index"]) for d in parallel]
+        self.assertEqual(seq_keys, par_keys)
 
 
 if __name__ == "__main__":

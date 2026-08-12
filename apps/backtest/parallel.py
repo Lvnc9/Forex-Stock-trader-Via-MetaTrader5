@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Any
+
+from apps.backtest.resources import resolve_worker_budget
 
 
 def default_worker_count() -> int:
@@ -16,9 +17,8 @@ def default_worker_count() -> int:
             return configured
     except Exception:
         pass
-    cpu = os.cpu_count() or 2
-    # Leave one core for the web process / OS.
-    return max(1, min(cpu - 1, 8))
+    budget = resolve_worker_budget()
+    return max(1, int(budget["compute_workers"]))
 
 
 def run_jobs_multiprocess(

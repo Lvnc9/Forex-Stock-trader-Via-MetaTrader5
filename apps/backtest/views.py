@@ -61,6 +61,7 @@ class BacktestCreateView(CreateView):
             else:
                 initial["strategy"] = strategy.pk
         initial.setdefault("initial_balance", BacktestRun._meta.get_field("initial_balance").default)
+        initial.setdefault("thermal_profile", BacktestRun.ThermalProfile.LAPTOP)
         initial.update(backtest_form_defaults(settings.TRADEBOT_DATA_ROOT))
         return initial
 
@@ -117,6 +118,7 @@ class BacktestSweepCreateView(CreateView):
                 sizing_mode=base.sizing_mode,
                 lot_size=base.lot_size,
                 contract_size=base.contract_size,
+                thermal_profile=base.thermal_profile or BacktestRun.ThermalProfile.LAPTOP,
                 parameter_overrides=overrides,
                 status=BacktestRun.Status.PENDING,
                 progress_pct=0.0,
@@ -160,6 +162,7 @@ class BacktestDetailView(DetailView):
         ctx["strategy_params"] = dict(run.strategy.parameters or {})
         ctx["strategy_edit_url"] = _strategy_edit_url(run.strategy)
         ctx["celery_eager"] = bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", True))
+        ctx["thermal_profile_label"] = run.get_thermal_profile_display()
         ctx["is_in_progress"] = run.status in (
             BacktestRun.Status.PENDING,
             BacktestRun.Status.RUNNING,

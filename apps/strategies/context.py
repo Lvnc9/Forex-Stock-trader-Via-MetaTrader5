@@ -15,6 +15,7 @@ class BarContext:
     parameters: dict
     indicators: IndicatorRegistry
     htf_bars: pd.DataFrame | None = None
+    htf_indicators_value: IndicatorRegistry | None = None
 
     @property
     def close(self) -> float:
@@ -35,6 +36,8 @@ class BarContext:
     @property
     def htf_indicators(self) -> IndicatorRegistry | None:
         """Indicator helpers on the HTF window when multi-timeframe bars are provided."""
+        if self.htf_indicators_value is not None:
+            return self.htf_indicators_value
         if self.htf_bars is None or self.htf_bars.empty:
             return None
         return IndicatorRegistry(self.htf_bars)

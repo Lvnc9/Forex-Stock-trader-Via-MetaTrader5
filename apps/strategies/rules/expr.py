@@ -176,6 +176,58 @@ def compute_indicators(
     return computed
 
 
+def eval_compare_mask(
+    op: str,
+    left: float | pd.Series,
+    right: float | pd.Series,
+    indicators: IndicatorRegistry,
+) -> pd.Series:
+    left_s = _as_series(left, indicators.bars.index)
+    right_s = _as_series(right, indicators.bars.index)
+    if op == "cross_above":
+        return (left_s.shift(1) <= right_s.shift(1)) & (left_s > right_s)
+    if op == "cross_below":
+        return (left_s.shift(1) >= right_s.shift(1)) & (left_s < right_s)
+    if op == ">":
+        return left_s > right_s
+    if op == ">=":
+        return left_s >= right_s
+    if op == "<":
+        return left_s < right_s
+    if op == "<=":
+        return left_s <= right_s
+    if op == "==":
+        return left_s == right_s
+    raise ExprError(f"Unsupported compare op: {op}")
+
+
+def eval_rule_group_mask(
+    group: dict | None,
+    *,
+    indicators: IndicatorRegistry,
+    computed: dict[str, pd.Series | dict[str, pd.Series]],
+    parameters: dict[str, Any],
+) -> pd.Series:
+    index = indicators.bars.index
+    if not group:
+        return pd.Series(False, index=index)
+    rules = group.get("rules") or []
+    if not rules:
+        return pd.Series(False, index=index)
+    logic = (group.get("logic") or "and").lower()
+    masks: list[pd.Series] = []
+    for rule in rules:
+        op = rule.get("op")
+        if op not in COMPARE_OPS:
+            raise ExprError(f"Unsupported rule op: {op}")
+        left = resolve_expr(rule["left"], indicators=indicators, computed=computed, parameters=parameters)
+        right = resolve_expr(rule["right"], indicators=indicators, computed=computed, parameters=parameters)
+        masks.append(eval_compare_mask(op, left, right, indicators).fillna(False))
+    if logic == "or":
+        return pd.concat(masks, axis=1).any(axis=1)
+    return pd.concat(masks, axis=1).all(axis=1)
+
+
 def eval_rule_group(
     group: dict | None,
     *,

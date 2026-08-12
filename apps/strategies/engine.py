@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from apps.backtest.indicator_prewarm import build_indicator_cache
 from apps.strategies.base import BaseStrategy
 from apps.strategies.context import BarContext
 from apps.strategies.indicators.registry import IndicatorRegistry
@@ -87,12 +88,20 @@ class SignalEngine:
         *,
         htf_bars: pd.DataFrame | None = None,
         indicator_cache: dict | None = None,
+        htf_indicator_cache: dict | None = None,
     ) -> BarContext:
         window = bars.iloc[: bar_index + 1]
         htf_window = None
+        htf_indicators = None
         if htf_bars is not None and not htf_bars.empty:
             ts = window.index[-1]
             htf_window = htf_bars.loc[:ts]
+            if htf_indicator_cache is not None:
+                htf_indicators = _CachedIndicatorRegistry(
+                    htf_bars,
+                    len(htf_window) - 1,
+                    htf_indicator_cache,
+                )
         if indicator_cache is not None:
             indicators: IndicatorRegistry = _CachedIndicatorRegistry(bars, bar_index, indicator_cache)
         else:
@@ -104,6 +113,7 @@ class SignalEngine:
             parameters=strategy.parameters,
             indicators=indicators,
             htf_bars=htf_window,
+            htf_indicators_value=htf_indicators,
         )
 
     def run(
@@ -115,25 +125,48 @@ class SignalEngine:
         warmup: int | None = None,
         progress_callback: Callable[[float, str], None] | None = None,
         use_indicator_cache: bool = True,
+        prewarmed_cache: dict | None = None,
+        prewarmed_htf_cache: dict | None = None,
     ) -> list[SignalEvent]:
         if bars.empty:
             return []
 
         min_bars = warmup if warmup is not None else self._warmup_bars(strategy)
         events: list[SignalEvent] = []
-        cache: dict | None = {} if use_indicator_cache else None
+        cache: dict | None = prewarmed_cache if prewarmed_cache is not None else ({} if use_indicator_cache else None)
+        htf_cache: dict | None = prewarmed_htf_cache
         n = len(bars)
         stride = max(n // 20, 1)
 
         if progress_callback is not None:
             progress_callback(0.0, "Preparing strategy")
         strategy.prepare(bars, htf_bars=htf_bars)
+        if use_indicator_cache and cache == {}:
+            cache.update(build_indicator_cache(bars, strategy, parameters=strategy.parameters))
+        if use_indicator_cache and htf_bars is not None and not htf_bars.empty and htf_cache is None:
+            htf_cache = build_indicator_cache(htf_bars, strategy, parameters=strategy.parameters)
+
+        if hasattr(strategy, "generate_signal_events"):
+            generated = strategy.generate_signal_events(
+                bars,
+                htf_bars=htf_bars,
+                warmup=min_bars,
+                indicator_cache=cache,
+                htf_indicator_cache=htf_cache,
+            )
+            if generated is not None:
+                return generated
 
         for i in range(n):
             if i + 1 < min_bars:
                 continue
             ctx = self.build_context(
-                strategy, bars, i, htf_bars=htf_bars, indicator_cache=cache
+                strategy,
+                bars,
+                i,
+                htf_bars=htf_bars,
+                indicator_cache=cache,
+                htf_indicator_cache=htf_cache,
             )
             signal = strategy.on_bar(ctx)
             if signal is not None:

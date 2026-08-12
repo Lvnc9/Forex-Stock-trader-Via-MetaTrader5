@@ -19,6 +19,11 @@ class BacktestRun(models.Model):
         ALL_IN = SIZING_ALL_IN, "All-in (cash ÷ price)"
         FIXED_LOTS = SIZING_FIXED_LOTS, "Fixed lots (match live Deployment.lot_size)"
 
+    class ThermalProfile(models.TextChoices):
+        ECO = "eco", "Eco"
+        LAPTOP = "laptop", "Laptop"
+        MAX = "max", "Max"
+
     strategy = models.ForeignKey(
         "strategies.Strategy",
         on_delete=models.CASCADE,
@@ -53,6 +58,12 @@ class BacktestRun(models.Model):
     contract_size = models.FloatField(
         default=DEFAULT_CONTRACT_SIZE,
         help_text="Units per 1.0 lot (100000 for standard FX; adjust for CFDs/indices).",
+    )
+    thermal_profile = models.CharField(
+        max_length=16,
+        choices=ThermalProfile.choices,
+        default=ThermalProfile.LAPTOP,
+        help_text="Thermal profile for worker budget: eco, laptop, or max.",
     )
     parameter_overrides = models.JSONField(
         default=dict,

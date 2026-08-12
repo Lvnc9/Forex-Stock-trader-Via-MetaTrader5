@@ -18,6 +18,7 @@ from apps.backtest.progress import (
     update_run_live_snapshot,
     update_run_progress,
 )
+from apps.backtest.resources import configure_blas_threads, nice_backtest_process, resolve_worker_budget
 from apps.backtest.runner import BacktestRunner, TradeRecord
 from apps.strategies.loader import instantiate_strategy
 
@@ -89,9 +90,12 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
 
     fail_orphaned_runs()
     mark_running(run)
+    budget = resolve_worker_budget(profile_override=getattr(run, "thermal_profile", None))
 
     alarm_set = False
     try:
+        configure_blas_threads(budget["blas_threads"])
+        nice_backtest_process()
         timeout_secs = _timeout_seconds()
         if _can_use_sigalrm():
             signal.signal(signal.SIGALRM, _timeout_handler)
@@ -112,7 +116,7 @@ def execute_backtest(run: BacktestRun) -> BacktestRun:
         update_run_progress(run, 2.0, "Loading market data")
         handler = BacktestDataHandler(
             settings.TRADEBOT_DATA_ROOT,
-            max_workers=int(getattr(settings, "TRADEBOT_BACKTEST_LOAD_WORKERS", 4)),
+            max_workers=budget["load_workers"],
             use_cache=bool(getattr(settings, "TRADEBOT_BACKTEST_CACHE", True)),
         )
         bars, htf_bars, tf_meta = handler.load(

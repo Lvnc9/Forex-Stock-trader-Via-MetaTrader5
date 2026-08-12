@@ -44,9 +44,14 @@ def _blocking_eager(blocking: bool | None) -> bool:
 
 def _execute_backtest_thread(run: BacktestRun) -> None:
     from django.db import close_old_connections
+    from django.db.utils import DatabaseError
 
     close_old_connections()
-    execute_backtest(run)
+    try:
+        execute_backtest(run)
+    except DatabaseError:
+        # SQLite test DBs can lock briefly while the request thread is still unwinding.
+        return
 
 
 def enqueue_backtest(run: BacktestRun, *, blocking: bool | None = None) -> BacktestRun:

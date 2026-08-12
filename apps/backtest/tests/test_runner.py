@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from apps.backtest.broker import SIZING_FIXED_LOTS, SimulatedBroker
 from apps.backtest.constants import INTRABAR_RULE
+from apps.backtest.resources import resolve_worker_budget
 from apps.backtest.metrics import downsample_equity
 from apps.backtest.parallel import default_worker_count
 from apps.backtest.runner import BacktestRunner, _Position
@@ -182,6 +183,23 @@ class MetricsHelperTests(SimpleTestCase):
 
     def test_default_workers_positive(self):
         self.assertGreaterEqual(default_worker_count(), 1)
+
+    @override_settings(
+        TRADEBOT_BACKTEST_THERMAL_PROFILE="laptop",
+        TRADEBOT_BACKTEST_CPU_FRACTION=0.7,
+        TRADEBOT_BACKTEST_CORE_RESERVE=2,
+        TRADEBOT_BACKTEST_WORKERS=0,
+        TRADEBOT_BACKTEST_LOAD_WORKERS=0,
+        TRADEBOT_BACKTEST_BLAS_THREADS=1,
+    )
+    def test_resolve_worker_budget_uses_safe_defaults(self):
+        from unittest.mock import patch
+
+        with patch("apps.backtest.resources.os.cpu_count", return_value=12):
+            budget = resolve_worker_budget()
+        self.assertEqual(budget["compute_workers"], 8)
+        self.assertEqual(budget["load_workers"], 8)
+        self.assertEqual(budget["blas_threads"], 1)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)

@@ -96,8 +96,17 @@ AGENT_HEARTBEAT_TTL_SECONDS = 90
 
 # Backtest performance — parallel CSV load + on-disk Parquet bar cache under data/.cache/
 TRADEBOT_BACKTEST_CACHE = env.bool("TRADEBOT_BACKTEST_CACHE", default=True)
-TRADEBOT_BACKTEST_LOAD_WORKERS = env.int("TRADEBOT_BACKTEST_LOAD_WORKERS", default=4)
+TRADEBOT_BACKTEST_THERMAL_PROFILE = env(
+    "TRADEBOT_BACKTEST_THERMAL_PROFILE",
+    default="laptop",
+)
+TRADEBOT_BACKTEST_CPU_FRACTION = env.float("TRADEBOT_BACKTEST_CPU_FRACTION", default=0.7)
+TRADEBOT_BACKTEST_CORE_RESERVE = env.int("TRADEBOT_BACKTEST_CORE_RESERVE", default=2)
+TRADEBOT_BACKTEST_LOAD_WORKERS = env.int("TRADEBOT_BACKTEST_LOAD_WORKERS", default=0)
 TRADEBOT_BACKTEST_WORKERS = env.int("TRADEBOT_BACKTEST_WORKERS", default=0)  # 0 = auto (cpu-1)
+TRADEBOT_BACKTEST_BLAS_THREADS = env.int("TRADEBOT_BACKTEST_BLAS_THREADS", default=1)
+TRADEBOT_BACKTEST_PARALLEL_HS = env.bool("TRADEBOT_BACKTEST_PARALLEL_HS", default=True)
+TRADEBOT_BACKTEST_VECTOR_RULES = env.bool("TRADEBOT_BACKTEST_VECTOR_RULES", default=True)
 # Allow multi-year M1 (~1.4M bars). Set lower to fail-fast on huge accidental ranges.
 TRADEBOT_MAX_BACKTEST_BARS = env.int("TRADEBOT_MAX_BACKTEST_BARS", default=2_000_000)
 # Wall-clock timeout seconds (SIGALRM main thread only). 0 = no alarm timeout.

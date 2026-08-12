@@ -44,6 +44,7 @@ class BacktestRunForm(forms.ModelForm):
             "sizing_mode",
             "lot_size",
             "contract_size",
+            "thermal_profile",
         ]
         widgets = {
             "start": forms.DateInput(attrs={"type": "date", "class": "tb-input"}),
@@ -58,6 +59,7 @@ class BacktestRunForm(forms.ModelForm):
             "sizing_mode": forms.Select(attrs={"class": "tb-input"}),
             "lot_size": forms.NumberInput(attrs={"class": "tb-input", "step": "0.01"}),
             "contract_size": forms.NumberInput(attrs={"class": "tb-input", "step": "1"}),
+            "thermal_profile": forms.RadioSelect(),
         }
         labels = {
             "htf_timeframe": "Higher timeframe (optional)",
@@ -65,6 +67,7 @@ class BacktestRunForm(forms.ModelForm):
             "sizing_mode": "Position sizing",
             "lot_size": "Lot size",
             "contract_size": "Contract size (units per lot)",
+            "thermal_profile": "Performance profile",
         }
         help_texts = {
             "timeframe": (
@@ -80,6 +83,10 @@ class BacktestRunForm(forms.ModelForm):
             ),
             "lot_size": "Ignored for all-in. Default 0.01 matches live deployments.",
             "contract_size": "100000 = standard FX lot. Lower for some CFDs/indices.",
+            "thermal_profile": (
+                "Eco = coolest / fewest cores. Laptop = recommended for your MacBook. "
+                "Max = fastest short bursts, but hottest."
+            ),
         }
 
     def __init__(self, *args, data_root=None, **kwargs):
@@ -104,6 +111,9 @@ class BacktestRunForm(forms.ModelForm):
             label="Higher timeframe (optional)",
             help_text=self.Meta.help_texts["htf_timeframe"],
         )
+        self.fields["thermal_profile"].required = False
+        self.fields["thermal_profile"].initial = BacktestRun.ThermalProfile.LAPTOP
+        self.fields["thermal_profile"].help_text = self.Meta.help_texts["thermal_profile"]
 
     def clean(self):
         cleaned = super().clean()
@@ -137,6 +147,9 @@ class BacktestRunForm(forms.ModelForm):
                 self.add_error("contract_size", "Contract size must be positive.")
         elif contract_size is not None and float(contract_size) <= 0:
             self.add_error("contract_size", "Contract size must be positive.")
+        cleaned["thermal_profile"] = (
+            cleaned.get("thermal_profile") or BacktestRun.ThermalProfile.LAPTOP
+        )
         return cleaned
 
 
